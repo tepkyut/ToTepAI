@@ -1,8 +1,6 @@
 import 'dart:async';
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:animated_text_kit/animated_text_kit.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -13,35 +11,43 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with TickerProviderStateMixin {
+  // Single-tone accent color for minimalist look
+  static const Color _mono = Color(0xFF111827); // near-black slate
+  static const Color _background = Color(0xFF00AEEF);
+
   late AnimationController _logoController;
   late Animation<double> _scaleAnimation;
   bool _showText = false;
   bool _fadeOut = false;
+  Timer? _navigationTimer;
 
   @override
   void initState() {
     super.initState();
     _logoController = AnimationController(
-      duration: const Duration(seconds: 3),
+      duration: const Duration(milliseconds: 900),
       vsync: this,
     );
-    _scaleAnimation = Tween(begin: 1.6, end: 1.0).animate(
+    _scaleAnimation = Tween(begin: 1.08, end: 1.0).animate(
       CurvedAnimation(parent: _logoController, curve: Curves.easeInOut),
     );
 
     // Logo animation first
     _logoController.forward().whenComplete(() {
+      if (!mounted) return;
       setState(() {
         _showText = true;
       });
     });
 
     // Go to onboarding
-    Timer(const Duration(seconds: 7), () {
+    _navigationTimer = Timer(const Duration(seconds: 5), () {
+      if (!mounted) return;
       setState(() {
         _fadeOut = true;
       });
       Future.delayed(const Duration(milliseconds: 500), () {
+        if (!mounted) return;
         Navigator.of(context).pushReplacementNamed('/onboarding');
       });
     });
@@ -50,88 +56,75 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void dispose() {
     _logoController.dispose();
+    _navigationTimer?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: _background,
       body: AnimatedOpacity(
         opacity: _fadeOut ? 0 : 1,
-        duration: const Duration(milliseconds: 500),
-        child: Stack(
-          children: [
-            // Gradient + bubbles
-            CustomPaint(
-              size: MediaQuery.of(context).size,
-              painter: GradientBubblesPainter(),
-            ),
-
-            // Centered content
-            Center(
+        duration: const Duration(milliseconds: 600),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Center(
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // Logo zoom animation
+                  // Logo: original, no circle, no tint
                   ScaleTransition(
                     scale: _scaleAnimation,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.blueAccent.withOpacity(0.4),
-                            blurRadius: 25,
-                            spreadRadius: 4,
+                    child: Image.asset(
+                      'assets/images/logo.png',
+                      width: 220,
+                      height: 220,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          width: 220,
+                          height: 220,
+                          alignment: Alignment.center,
+                          color: Colors.white,
+                          child: Icon(
+                            Icons.image_not_supported_outlined,
+                            color: _mono.withOpacity(0.4),
+                            size: 48,
                           ),
-                        ],
-                      ),
-                      child: ClipOval(
-                        child: Image.asset(
-                          'assets/images/logo.png',
-                          width: 180,
-                          height: 180,
-                          fit: BoxFit.cover,
-                        ),
-                      ),
+                        );
+                      },
                     ),
                   ),
-                  const SizedBox(height: 40),
-
-                  // Proper Typewriter effect
+                  const SizedBox(height: 15),
+                  // Wordmark only (tagline removed for minimal look)
                   if (_showText)
-                    AnimatedTextKit(
-                      isRepeatingAnimation: false,
-                      animatedTexts: [
-                        TypewriterAnimatedText(
-                          'ToTepAI',
-                          textStyle: GoogleFonts.rowdies(
-                            fontSize: 42,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            letterSpacing: 2,
-                            shadows: [
-                              const Shadow(
-                                color: Colors.black45,
-                                blurRadius: 8,
-                                offset: Offset(2, 2),
-                              ),
-                            ],
-                          ),
-                          speed: const Duration(milliseconds: 170),
-                          cursor: '|',
+                    FadeIn(
+                      child: Text(
+                        'ToTepAI',
+                        style: GoogleFonts.alfaSlabOne(
+                          color: Colors.white,
+                          fontSize: 46,
+                          letterSpacing: 0.6,
+                          height: 1.05,
+                          shadows: [
+                            Shadow(
+                              color: Colors.black.withOpacity(0.08),
+                              offset: Offset(0, 1),
+                              blurRadius: 2,
+                            ),
+                          ],
                         ),
-                      ],
-                      totalRepeatCount: 1,
-                      pause: const Duration(milliseconds: 300),
-                      displayFullTextOnTap: true,
-                      stopPauseOnTap: true,
+                        textAlign: TextAlign.center,
+                      ),
+                      delay: const Duration(milliseconds: 50),
                     ),
                 ],
               ),
             ),
-            // Credits/affiliation at bottom
-          ],
+          ),
         ),
       ),
     );
@@ -158,7 +151,7 @@ class _FadeInState extends State<FadeIn> with SingleTickerProviderStateMixin {
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 600),
     );
     _animation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
 
@@ -179,47 +172,4 @@ class _FadeInState extends State<FadeIn> with SingleTickerProviderStateMixin {
   }
 }
 
-// Enhanced Gradient background with faint bubbles
-class GradientBubblesPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    // Gradient
-    final Rect rect = Rect.fromLTWH(0, 0, size.width, size.height);
-    final Gradient gradient = LinearGradient(
-      begin: Alignment.topCenter,
-      end: Alignment.bottomCenter,
-      colors: [Color(0xFF2196F3), Color(0xFF64B5F6)],
-    );
-    final Paint paint = Paint()..shader = gradient.createShader(rect);
-
-    // Draw gradient curve
-    Path bluePath = Path();
-    bluePath.lineTo(0, size.height * 0.6);
-    bluePath.quadraticBezierTo(
-      size.width * 0.5,
-      size.height * 0.8,
-      size.width,
-      size.height * 0.6,
-    );
-    bluePath.lineTo(size.width, 0);
-    bluePath.close();
-    canvas.drawPath(bluePath, paint);
-
-    // Bubbles
-    var bubblePaint = Paint()
-      ..color = Colors.white.withOpacity(0.13)
-      ..style = PaintingStyle.fill;
-    final random = Random(1); // Fixed seed, consistent pattern
-
-    for (int i = 0; i < 10; i++) {
-      final bubbleRadius = random.nextDouble() * 28 + 10;
-      final bubbleX = random.nextDouble() * size.width;
-      final bubbleY =
-          size.height * 0.62 + random.nextDouble() * size.height * 0.27;
-      canvas.drawCircle(Offset(bubbleX, bubbleY), bubbleRadius, bubblePaint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
+// End of file

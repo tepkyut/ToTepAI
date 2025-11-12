@@ -30,32 +30,60 @@ class _AuthPageState extends State<AuthPage> {
                       width: double.infinity,
                       height: 250,
                       decoration: const BoxDecoration(
-                        color: Color(0xFF90CAF9),
+                        color: Color(0xFF00AEEF),
                         borderRadius: BorderRadius.only(
                           bottomLeft: Radius.circular(100),
                         ),
                       ),
-                      child: Padding(
-                        padding: const EdgeInsets.only(top: 60),
-                        child: Column(
-                          children: [
-                            Text(
-                              "ToTepAI",
-                              style: GoogleFonts.fruktur(
-                                fontSize: 47,
-                                color: Colors.white,
+                      child: Stack(
+                        children: [
+                          // Top-left brand (from onboarding)
+                          Positioned(
+                            top: 16,
+                            left: 16,
+                            child: Row(
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.asset(
+                                    'assets/images/logo.png',
+                                    width: 46,
+                                    height: 46,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                              
+                              ],
+                            ),
+                          ),
+                          // Centered title and subtitle
+                          Align(
+                            alignment: Alignment.topCenter,
+                            child: Padding(
+                              padding: const EdgeInsets.only(top: 60),
+                              child: Column(
+                                children: [
+                                  Text(
+                                    "ToTepAI",
+                                    style: GoogleFonts.alfaSlabOne(
+                                      fontSize: 47,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    "Smart Bangus Farming Assistant",
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: Colors.white.withOpacity(0.9),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            const SizedBox(height: 8),
-                            Text(
-                              "Smart Bangus Farming Assistant",
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.white.withOpacity(0.9),
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
 
@@ -66,7 +94,7 @@ class _AuthPageState extends State<AuthPage> {
                       width: 300,
                       height: 45,
                       decoration: BoxDecoration(
-                        border: Border.all(color: Colors.blueAccent),
+                        border: Border.all(color: Color(0xFF00AEEF)),
                         borderRadius: BorderRadius.circular(30),
                       ),
                       child: Row(
@@ -78,7 +106,7 @@ class _AuthPageState extends State<AuthPage> {
                               child: Container(
                                 decoration: BoxDecoration(
                                   color: isLoginSelected
-                                      ? Colors.blueAccent
+                                      ? Color(0xFF00AEEF)
                                       : Colors.transparent,
                                   borderRadius: BorderRadius.circular(30),
                                 ),
@@ -88,7 +116,7 @@ class _AuthPageState extends State<AuthPage> {
                                     style: TextStyle(
                                       color: isLoginSelected
                                           ? Colors.white
-                                          : Colors.blueAccent,
+                                          : Color(0xFF00AEEF),
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
@@ -103,7 +131,7 @@ class _AuthPageState extends State<AuthPage> {
                               child: Container(
                                 decoration: BoxDecoration(
                                   color: !isLoginSelected
-                                      ? Colors.blueAccent
+                                      ? Color(0xFF00AEEF)
                                       : Colors.transparent,
                                   borderRadius: BorderRadius.circular(30),
                                 ),
@@ -113,7 +141,7 @@ class _AuthPageState extends State<AuthPage> {
                                     style: TextStyle(
                                       color: !isLoginSelected
                                           ? Colors.white
-                                          : Colors.blueAccent,
+                                          : Color(0xFF00AEEF),
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
@@ -151,7 +179,7 @@ class _AuthPageState extends State<AuthPage> {
                     TextSpan(
                       text: "Privacy Policy",
                       style: const TextStyle(
-                        color: Colors.blueAccent,
+                        color: Color(0xFF00AEEF),
                         fontWeight: FontWeight.w500,
                       ),
                       recognizer: TapGestureRecognizer()
@@ -167,7 +195,7 @@ class _AuthPageState extends State<AuthPage> {
                     TextSpan(
                       text: "Terms of Service",
                       style: const TextStyle(
-                        color: Colors.blueAccent,
+                        color: Color(0xFF00AEEF),
                         fontWeight: FontWeight.w500,
                       ),
                       recognizer: TapGestureRecognizer()

@@ -1,10 +1,27 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:totepai/pages/authentications/auth_page.dart';
-import 'package:totepai/pages/dashboard/home.dart';
+import 'package:totepai/pages/dashboard/home_page.dart';
 import 'package:totepai/pages/splash_screen.dart';
 import 'package:totepai/pages/onboarding_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  if (Platform.isAndroid) {
+    await Firebase.initializeApp(
+      options: const FirebaseOptions(
+        apiKey: 'AIzaSyCo02gXEt1xeUGMKYQWQymsgmGgrJTNesE',
+        appId: '1:1095142914393:android:5d98a16bc4c4e6a059f448',
+        messagingSenderId: '1095142914393',
+        projectId: 'totepai-f457c',
+        storageBucket: 'totepai-f457c.firebasestorage.app',
+      ),
+    );
+  } else {
+    await Firebase.initializeApp();
+  }
   runApp(const ToTepAI());
 }
 
