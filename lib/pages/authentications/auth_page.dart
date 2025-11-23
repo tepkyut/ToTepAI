@@ -53,7 +53,6 @@ class _AuthPageState extends State<AuthPage> {
                                   ),
                                 ),
                                 const SizedBox(width: 10),
-                              
                               ],
                             ),
                           ),

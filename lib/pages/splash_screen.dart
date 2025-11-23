@@ -13,7 +13,7 @@ class _SplashScreenState extends State<SplashScreen>
     with TickerProviderStateMixin {
   // Single-tone accent color for minimalist look
   static const Color _mono = Color(0xFF111827); // near-black slate
-  static const Color _background = Color(0xFF00AEEF);
+  static const Color _background = Color(0xFF0981D1);
 
   late AnimationController _logoController;
   late Animation<double> _scaleAnimation;

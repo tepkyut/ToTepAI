@@ -44,6 +44,7 @@ dependencies:
   firebase_auth: ^6.1.2
   firebase_storage: ^13.0.4
   intl: ^0.20.2
+  google_sign_in: ^7.2.0
 
 dev_dependencies:
   flutter_test:
@@ -78,10 +79,11 @@ flutter:
  
     - assets/images/icon.png
     - assets/images/logo.png
-    - assets/images/classification1.png
-    - assets/images/classification.jpg
-    - assets/images/forecasting.png
-    - assets/images/forecasting1.png
+    - assets/images/image1.gif
+    - assets/images/image2.png
+    - assets/images/classification.png
+    - assets/images/forecast.png
+    - assets/images/Farmers.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
