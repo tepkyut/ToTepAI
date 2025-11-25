@@ -35,7 +35,7 @@ class ReportPage extends StatelessWidget {
             padding: const EdgeInsets.only(top: 60, bottom: 40),
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [Color(0xFF00AEEF), Color(0xFF00AEEF)],
+                colors: [Color(0xFF0981D1), Color(0xFF0981D1)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),

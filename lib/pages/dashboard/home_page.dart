@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'dart:math';
+import 'package:fl_chart/fl_chart.dart';
 
 import 'widgets/stat_card.dart';
 import 'widgets/forecast_chart.dart';
@@ -17,11 +19,11 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
 
-  final List<Widget> _pages = const [
-    DashboardContent(),
-    ForecastPage(),
-    ReportPage(),
-    ProfilePage(),
+  final List<Widget> _pages = [
+    const DashboardContent(),
+    const ForecastPage(),
+    const ReportPage(),
+    const ProfilePage(),
   ];
 
   void _onItemTapped(int index) {
@@ -121,8 +123,34 @@ class _ActiveNavIcon extends StatelessWidget {
   }
 }
 
-class DashboardContent extends StatelessWidget {
+class DashboardContent extends StatefulWidget {
   const DashboardContent({super.key});
+
+  @override
+  State<DashboardContent> createState() => _DashboardContentState();
+}
+
+class _DashboardContentState extends State<DashboardContent> {
+  int selectedYear = 2025;
+  final List<int> yearOptions = [2020, 2021, 2022, 2023, 2024, 2025];
+
+  // Data storage for total bangus by year and month
+  late final Map<int, List<int>> totalBangusDataByYear;
+
+  @override
+  void initState() {
+    super.initState();
+    // Generate random static data for total bangus (combining all classes)
+    final random = Random(8);
+    totalBangusDataByYear = {};
+    for (var year in yearOptions) {
+      // Generate total bangus count per month (12 months)
+      totalBangusDataByYear[year] = List.generate(
+        12,
+        (i) => 100 + random.nextInt(200), // Random total between 100-300
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -131,7 +159,7 @@ class DashboardContent extends StatelessWidget {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         elevation: 0,
-        backgroundColor: const Color(0xFF00AEEF),
+        backgroundColor: const Color(0xFF0981D1),
         titleSpacing: 12,
         title: Row(
           children: [
@@ -149,10 +177,6 @@ class DashboardContent extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications_none, color: Colors.white),
-            onPressed: () {},
-          ),
-          IconButton(
-            icon: const Icon(Icons.settings, color: Colors.white),
             onPressed: () {},
           ),
         ],
@@ -206,36 +230,33 @@ class DashboardContent extends StatelessWidget {
               ),
             ),
 
-            const SizedBox(height: 25),
-
             // ⚡ Quick Actions
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () {},
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Color(0xFF00AEEF)),
-                      foregroundColor: const Color(0xFF00AEEF),
-                      padding: const EdgeInsets.symmetric(vertical: 5),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    icon: const Icon(Icons.sensor_occupied_rounded),
-                    label: Text(
-                      "Add Data",
-                      style: GoogleFonts.poppins(
-                        fontSize: 13,
-                        color: Colors.black87,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 5),
-              ],
-            ),
-
+            // Row(
+            //   children: [
+            //     Expanded(
+            //       child: OutlinedButton.icon(
+            //         onPressed: () {},
+            //         style: OutlinedButton.styleFrom(
+            //           side: const BorderSide(color: Color(0xFF0981D1)),
+            //           foregroundColor: const Color(0xFF0981D1),
+            //           padding: const EdgeInsets.symmetric(vertical: 5),
+            //           shape: RoundedRectangleBorder(
+            //             borderRadius: BorderRadius.circular(14),
+            //           ),
+            //         ),
+            //         icon: const Icon(Icons.sensor_occupied_rounded),
+            //         label: Text(
+            //           "Add Data",
+            //           style: GoogleFonts.poppins(
+            //             fontSize: 13,
+            //             color: Colors.black87,
+            //           ),
+            //         ),
+            //       ),
+            //     ),
+            //     const SizedBox(width: 5),
+            //   ],
+            // ),
             const SizedBox(height: 20),
 
             // 📊 Statistic Cards
@@ -264,25 +285,41 @@ class DashboardContent extends StatelessWidget {
                   value: "Nov 12, 2025",
                   color: Colors.orangeAccent,
                 ),
-                StatCard(
-                  icon: Icons.trending_up,
-                  title: "Growth Rate",
-                  value: "+4.5%",
-                  color: Colors.green,
-                ),
               ],
             ),
 
             const SizedBox(height: 30),
 
-            // 📈 Forecast Chart
-            Text(
-              "Harvest Forecast Trend",
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: const Color(0xFF0F172A),
-              ),
+            // 📈 Total Bangus Forecast Chart
+            Row(
+              children: [
+                Text(
+                  "Total Bangus Forecast",
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF0F172A),
+                  ),
+                ),
+                const Spacer(),
+                DropdownButton<int>(
+                  value: selectedYear,
+                  borderRadius: BorderRadius.circular(10),
+                  dropdownColor: Colors.white,
+                  style: const TextStyle(color: Colors.black, fontSize: 14),
+                  items: yearOptions
+                      .map(
+                        (y) => DropdownMenuItem<int>(
+                          value: y,
+                          child: Text(y.toString()),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (v) => setState(() {
+                    selectedYear = v!;
+                  }),
+                ),
+              ],
             ),
             const SizedBox(height: 15),
             Container(
@@ -298,7 +335,115 @@ class DashboardContent extends StatelessWidget {
                   ),
                 ],
               ),
-              child: const ForecastChart(),
+              child: AspectRatio(
+                aspectRatio: 1.5,
+                child: LineChart(
+                  LineChartData(
+                    lineBarsData: [
+                      LineChartBarData(
+                        spots: List.generate(
+                          12,
+                          (i) => FlSpot(
+                            i.toDouble(),
+                            (totalBangusDataByYear[selectedYear] ?? [])[i]
+                                .toDouble(),
+                          ),
+                        ),
+                        isCurved: true,
+                        color: const Color(0xFF0981D1),
+                        barWidth: 3,
+                        dotData: FlDotData(show: false),
+                        belowBarData: BarAreaData(
+                          show: true,
+                          color: const Color(0xFF0981D1).withOpacity(0.18),
+                        ),
+                      ),
+                    ],
+                    titlesData: FlTitlesData(
+                      bottomTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          interval: 1.0,
+                          getTitlesWidget: (value, meta) {
+                            const months = [
+                              'JAN',
+                              'FEB',
+                              'MAR',
+                              'APR',
+                              'MAY',
+                              'JUN',
+                              'JUL',
+                              'AUG',
+                              'SEP',
+                              'OCT',
+                              'NOV',
+                              'DEC',
+                            ];
+                            final idx = value.round();
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 8.0),
+                              child: Transform.rotate(
+                                angle: -0.32,
+                                child: Text(
+                                  idx >= 0 && idx < 12 ? months[idx] : '',
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      leftTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          reservedSize: 40,
+                          interval: 50,
+                          getTitlesWidget: (value, meta) => Text(
+                            value.toInt().toString(),
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ),
+                      ),
+                      rightTitles: AxisTitles(
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
+                      topTitles: AxisTitles(
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
+                    ),
+                    minY: 0,
+                    maxY: 350,
+                    gridData: FlGridData(show: true, horizontalInterval: 50),
+                    borderData: FlBorderData(
+                      show: true,
+                      border: const Border.symmetric(
+                        horizontal: BorderSide(
+                          width: 0.8,
+                          color: Color(0xFFCCCCCC),
+                        ),
+                        vertical: BorderSide.none,
+                      ),
+                    ),
+                    lineTouchData: LineTouchData(
+                      enabled: true,
+                      touchTooltipData: LineTouchTooltipData(
+                        getTooltipItems: (touchedSpots) => touchedSpots.map((
+                          touched,
+                        ) {
+                          return LineTooltipItem(
+                            'Total Bangus\n$selectedYear: ${touched.y.toInt()}',
+                            TextStyle(
+                              color: const Color(0xFF0981D1),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ),
 
             const SizedBox(height: 30),
@@ -368,7 +513,7 @@ class DashboardContent extends StatelessWidget {
                   icon: Icons.update_rounded,
                   iconColor: Colors.orangeAccent,
                   title: "Sensor readings",
-                  subtitle: "New water temperature recorded",
+                  subtitle: "New Bangus recorded",
                   time: "5h ago",
                 ),
                 SizedBox(height: 8),

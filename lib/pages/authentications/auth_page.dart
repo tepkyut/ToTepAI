@@ -30,7 +30,7 @@ class _AuthPageState extends State<AuthPage> {
                       width: double.infinity,
                       height: 250,
                       decoration: const BoxDecoration(
-                        color: Color(0xFF00AEEF),
+                        color: Color(0xFF0981D1),
                         borderRadius: BorderRadius.only(
                           bottomLeft: Radius.circular(100),
                         ),
@@ -93,7 +93,7 @@ class _AuthPageState extends State<AuthPage> {
                       width: 300,
                       height: 45,
                       decoration: BoxDecoration(
-                        border: Border.all(color: Color(0xFF00AEEF)),
+                        border: Border.all(color: Color(0xFF0981D1)),
                         borderRadius: BorderRadius.circular(30),
                       ),
                       child: Row(
@@ -105,7 +105,7 @@ class _AuthPageState extends State<AuthPage> {
                               child: Container(
                                 decoration: BoxDecoration(
                                   color: isLoginSelected
-                                      ? Color(0xFF00AEEF)
+                                      ? Color(0xFF0981D1)
                                       : Colors.transparent,
                                   borderRadius: BorderRadius.circular(30),
                                 ),
@@ -115,7 +115,7 @@ class _AuthPageState extends State<AuthPage> {
                                     style: TextStyle(
                                       color: isLoginSelected
                                           ? Colors.white
-                                          : Color(0xFF00AEEF),
+                                          : Color(0xFF0981D1),
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
@@ -130,7 +130,7 @@ class _AuthPageState extends State<AuthPage> {
                               child: Container(
                                 decoration: BoxDecoration(
                                   color: !isLoginSelected
-                                      ? Color(0xFF00AEEF)
+                                      ? Color(0xFF0981D1)
                                       : Colors.transparent,
                                   borderRadius: BorderRadius.circular(30),
                                 ),
@@ -140,7 +140,7 @@ class _AuthPageState extends State<AuthPage> {
                                     style: TextStyle(
                                       color: !isLoginSelected
                                           ? Colors.white
-                                          : Color(0xFF00AEEF),
+                                          : Color(0xFF0981D1),
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
@@ -178,7 +178,7 @@ class _AuthPageState extends State<AuthPage> {
                     TextSpan(
                       text: "Privacy Policy",
                       style: const TextStyle(
-                        color: Color(0xFF00AEEF),
+                        color: Color(0xFF0981D1),
                         fontWeight: FontWeight.w500,
                       ),
                       recognizer: TapGestureRecognizer()
@@ -194,7 +194,7 @@ class _AuthPageState extends State<AuthPage> {
                     TextSpan(
                       text: "Terms of Service",
                       style: const TextStyle(
-                        color: Color(0xFF00AEEF),
+                        color: Color(0xFF0981D1),
                         fontWeight: FontWeight.w500,
                       ),
                       recognizer: TapGestureRecognizer()

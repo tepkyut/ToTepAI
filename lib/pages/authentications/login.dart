@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:totepai/controllers/firebase_auth.dart';
 import 'package:totepai/pages/dashboard/home_page.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -14,7 +15,9 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _passwordController = TextEditingController();
   final FocusNode _emailFocus = FocusNode();
   final FocusNode _passwordFocus = FocusNode();
+  final AuthController _authController = AuthController();
   bool _isLoading = false;
+  bool _isGoogleLoading = false;
   bool _obscurePassword = true;
 
   void _loginUser() async {
@@ -43,6 +46,27 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = false);
   }
 
+  Future<void> _handleGoogleSignIn() async {
+    setState(() => _isGoogleLoading = true);
+    final String result = await _authController.signInWithGoogle();
+    if (!mounted) return;
+    setState(() => _isGoogleLoading = false);
+
+    if (result == "success") {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Signed in with Google")));
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const HomePage()),
+      );
+    } else if (result != "cancelled") {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(result)));
+    }
+  }
+
   InputDecoration _buildInputDecoration({
     required String labelText,
     required FocusNode focusNode,
@@ -57,17 +81,17 @@ class _LoginScreenState extends State<LoginScreen> {
       prefixIcon: icon != null
           ? Icon(
               icon,
-              color: isFocused || isFilled ? Color(0xFF00AEEF) : Colors.grey,
+              color: isFocused || isFilled ? Color(0xFF0981D1) : Colors.grey,
             )
           : null,
       suffixIcon: suffixIcon,
       labelText: labelText,
       labelStyle: TextStyle(
-        color: isFocused ? Color(0xFF00AEEF) : Colors.grey,
+        color: isFocused ? Color(0xFF0981D1) : Colors.grey,
         fontSize: 16,
       ),
       floatingLabelStyle: const TextStyle(
-        color: Color(0xFF00AEEF),
+        color: Color(0xFF0981D1),
         fontWeight: FontWeight.bold,
       ),
       filled: true,
@@ -76,14 +100,14 @@ class _LoginScreenState extends State<LoginScreen> {
           : Colors.grey.shade100, // subtle background
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(30),
+        borderRadius: BorderRadius.circular(15),
         borderSide: const BorderSide(color: Colors.grey, width: 1.2),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(30),
-        borderSide: const BorderSide(color: Color(0xFF00AEEF), width: 2),
+        borderRadius: BorderRadius.circular(15),
+        borderSide: const BorderSide(color: Color(0xFF0981D1), width: 2),
       ),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(30)),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
     );
   }
 
@@ -107,6 +131,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 40),
+
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -137,7 +162,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ? Icons.visibility_off_outlined
                       : Icons.visibility_outlined,
                   color: _passwordFocus.hasFocus
-                      ? Color(0xFF00AEEF)
+                      ? Color(0xFF0981D1)
                       : Colors.grey,
                 ),
                 onPressed: () =>
@@ -150,7 +175,7 @@ class _LoginScreenState extends State<LoginScreen> {
           ElevatedButton(
             onPressed: _isLoading ? null : _loginUser,
             style: ElevatedButton.styleFrom(
-              backgroundColor: Color(0xFF00AEEF),
+              backgroundColor: Color(0xFF0981D1),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(30),
               ),
@@ -186,9 +211,7 @@ class _LoginScreenState extends State<LoginScreen> {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: () {
-          // TODO: Add Google Sign-In logic
-        },
+        onPressed: _isGoogleLoading ? null : _handleGoogleSignIn,
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.white,
           elevation: 3,
@@ -198,17 +221,23 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           padding: const EdgeInsets.symmetric(vertical: 14),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Image.asset('assets/icon/google.png', width: 24, height: 24),
-            const SizedBox(width: 10),
-            Text(
-              text,
-              style: const TextStyle(fontSize: 16, color: Colors.black87),
-            ),
-          ],
-        ),
+        child: _isGoogleLoading
+            ? const SizedBox(
+                height: 24,
+                width: 24,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Image.asset('assets/icon/google.png', width: 24, height: 24),
+                  const SizedBox(width: 10),
+                  Text(
+                    text,
+                    style: const TextStyle(fontSize: 16, color: Colors.black87),
+                  ),
+                ],
+              ),
       ),
     );
   }
