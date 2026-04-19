@@ -46,6 +46,8 @@ dependencies:
   image_picker: ^1.0.7
   intl: ^0.20.2
   google_sign_in: ^7.2.0
+  shared_preferences: ^2.5.4
+  http: ^1.2.0
 
 dev_dependencies:
   flutter_test:
@@ -77,6 +79,7 @@ flutter:
     - assets/icon/icon.png
     - assets/icon/google.png
     - assets/icon/logout.png
+    - assets/icon/fish.png
  
     - assets/images/icon.png
     - assets/images/logo.png

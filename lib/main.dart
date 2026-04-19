@@ -5,6 +5,7 @@ import 'package:totepai/pages/authentications/auth_page.dart';
 import 'package:totepai/pages/dashboard/home_page.dart';
 import 'package:totepai/pages/splash_screen.dart';
 import 'package:totepai/pages/onboarding_screen.dart';
+import 'package:totepai/controllers/harvest_data_controller.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -12,17 +13,23 @@ void main() async {
   if (Platform.isAndroid) {
     await Firebase.initializeApp(
       options: const FirebaseOptions(
-        apiKey: 'AIzaSyCo02gXEt1xeUGMKYQWQymsgmGgrJTNesE',
-        appId: '1:1095142914393:android:5d98a16bc4c4e6a059f448',
+        apiKey: 'AIzaSyDOC3iZ_38Vzoir-L4OmkOES5KjYWB1K5M',
+        appId: '1:649100271753:android:a8196445bcaaf0f3a82658',
         messagingSenderId: '1095142914393',
-        projectId: 'totepai-f457c',
-        storageBucket: 'totepai-f457c.firebasestorage.app',
+        projectId: 'totepai-edd0f',
+        storageBucket: 'totepai-edd0f.firebasestorage.app',
       ),
     );
   } else {
     await Firebase.initializeApp();
   }
-  runApp(const ToTepAI());
+  runApp(
+    const ToTepAI()
+    // const MaterialApp(
+    //   debugShowCheckedModeBanner: false,
+    //   home: HarvestFormPage(),
+    // ),
+  );
 }
 
 class ToTepAI extends StatelessWidget {

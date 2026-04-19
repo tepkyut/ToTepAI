@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:totepai/controllers/firebase_auth.dart';
 import 'package:totepai/pages/dashboard/home_page.dart';
-import 'package:totepai/pages/authentications/auth_page.dart';
 import 'package:totepai/utils/responsive.dart';
-import 'package:totepai/services/translation_service.dart';
-import 'package:totepai/services/language_persistence.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -35,7 +31,6 @@ class _SignInScreenState extends State<SignInScreen> {
   String? _emailError;
   String? _passwordError;
   String? _confirmPasswordError;
-  String _selectedLanguage = 'English';
 
   // Password strength indicator
   String _passwordStrength = '';
@@ -133,9 +128,31 @@ class _SignInScreenState extends State<SignInScreen> {
         MaterialPageRoute(builder: (context) => const HomePage()),
       );
     } else {
+      String errorMessage = "Registration failed";
+      
+      // Handle specific registration errors
+      if (result.contains('email-already-in-use')) {
+        errorMessage = "An account with this email already exists";
+      } else if (result.contains('weak-password')) {
+        errorMessage = "Password is too weak. Please choose a stronger password";
+      } else if (result.contains('invalid-email')) {
+        errorMessage = "Invalid email address format";
+      } else if (result.contains('operation-not-allowed')) {
+        errorMessage = "Email/password accounts are not enabled";
+      } else if (result.contains('network')) {
+        errorMessage = "Network error. Please check your connection";
+      } else {
+        errorMessage = result;
+      }
+      
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(result)));
+      ).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -218,17 +235,9 @@ class _SignInScreenState extends State<SignInScreen> {
     );
   }
 
-  Future<void> _loadSavedLanguage() async {
-    final savedLanguage = await LanguagePersistence.getLanguage();
-    setState(() {
-      _selectedLanguage = savedLanguage;
-    });
-  }
-
   @override
   void initState() {
     super.initState();
-    _loadSavedLanguage();
     _nameFocus.addListener(() => setState(() {}));
     _emailFocus.addListener(() => setState(() {}));
     _passwordFocus.addListener(() => setState(() {}));
@@ -262,7 +271,7 @@ class _SignInScreenState extends State<SignInScreen> {
       child: ResponsiveConstrainedBox(
         child: Column(
           children: [
-            const SizedBox(height: 5),
+            const SizedBox(height: 15),
 
             // 👤 Full Name
             SizedBox(
@@ -457,45 +466,6 @@ class _SignInScreenState extends State<SignInScreen> {
             ),
             const SizedBox(height: 20),
             _buildGoogleButton("Sign up with Google"),
-            const SizedBox(height: 30),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  TranslationService.getTranslationSync('already_have_account', _selectedLanguage),
-                  style: GoogleFonts.plusJakartaSans(
-                    color: Colors.grey[600],
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(width: 5),
-                GestureDetector(
-                  onTap: () {
-                    // Find the AuthPage parent and toggle to login
-                    final authPageState = context.findAncestorStateOfType<AuthPageState>();
-                    if (authPageState != null) {
-                      authPageState.setState(() {
-                        authPageState.isLoginSelected = true;
-                      });
-                    } else {
-                      // Fallback: navigate to new AuthPage if not found
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => AuthPage(showLogin: true, showToggleButtons: false)),
-                      );
-                    }
-                  },
-                  child: Text(
-                    TranslationService.getTranslationSync('login', _selectedLanguage),
-                    style: GoogleFonts.plusJakartaSans(
-                      color: const Color(0xFF0981D1),
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
           ],
         ),
       ),

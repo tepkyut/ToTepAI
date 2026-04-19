@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -40,7 +41,7 @@ class _SplashScreenState extends State<SplashScreen>
       });
     });
 
-    // Go to onboarding
+    // Go to onboarding or dashboard based on auth state
     _navigationTimer = Timer(const Duration(seconds: 5), () {
       if (!mounted) return;
       setState(() {
@@ -48,7 +49,9 @@ class _SplashScreenState extends State<SplashScreen>
       });
       Future.delayed(const Duration(milliseconds: 500), () {
         if (!mounted) return;
-        Navigator.of(context).pushReplacementNamed('/onboarding');
+        final user = FirebaseAuth.instance.currentUser;
+        final route = user != null ? '/dashboard' : '/onboarding';
+        Navigator.of(context).pushReplacementNamed(route);
       });
     });
   }
@@ -102,6 +105,7 @@ class _SplashScreenState extends State<SplashScreen>
                   // Wordmark only (tagline removed for minimal look)
                   if (_showText)
                     FadeIn(
+                      delay: const Duration(milliseconds: 50),
                       child: Text(
                         'ToTepAI',
                         style: GoogleFonts.alfaSlabOne(
@@ -119,7 +123,6 @@ class _SplashScreenState extends State<SplashScreen>
                         ),
                         textAlign: TextAlign.center,
                       ),
-                      delay: const Duration(milliseconds: 50),
                     ),
                 ],
               ),
@@ -135,8 +138,7 @@ class _SplashScreenState extends State<SplashScreen>
 class FadeIn extends StatefulWidget {
   final Widget child;
   final Duration delay;
-  const FadeIn({Key? key, required this.child, this.delay = Duration.zero})
-    : super(key: key);
+  const FadeIn({super.key, required this.child, this.delay = Duration.zero});
 
   @override
   State<FadeIn> createState() => _FadeInState();

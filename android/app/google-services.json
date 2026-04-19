@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "1095142914393",
-    "project_id": "totepai-f457c",
-    "storage_bucket": "totepai-f457c.firebasestorage.app"
+    "project_number": "649100271753",
+    "project_id": "totepai-edd0f",
+    "storage_bucket": "totepai-edd0f.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:1095142914393:android:5d98a16bc4c4e6a059f448",
+        "mobilesdk_app_id": "1:649100271753:android:a8196445bcaaf0f3a82658",
         "android_client_info": {
           "package_name": "com.example.totepai"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyCo02gXEt1xeUGMKYQWQymsgmGgrJTNesE"
+          "current_key": "AIzaSyDOC3iZ_38Vzoir-L4OmkOES5KjYWB1K5M"
         }
       ],
       "services": {
