@@ -162,7 +162,12 @@ class _LoginScreenState extends State<LoginScreen> {
     if (result == "success") {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text("Signed in with Google")));
+      ).showSnackBar(
+        SnackBar(
+          content: const Text("Signed in with Google"),
+          backgroundColor: Colors.green,
+        ),
+      );
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const HomePage()),
@@ -360,7 +365,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 controller: _emailController,
                 focusNode: _emailFocus,
                 decoration: _buildInputDecoration(
-                  labelText: "Enter your email",
+                  labelText: TranslationService.getTranslationSync('enter_email', _selectedLanguage),
                   focusNode: _emailFocus,
                   controller: _emailController,
                   icon: Icons.email_outlined,
@@ -383,7 +388,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 focusNode: _passwordFocus,
                 obscureText: _obscurePassword,
                 decoration: _buildInputDecoration(
-                  labelText: "Enter your password",
+                  labelText: TranslationService.getTranslationSync('enter_password', _selectedLanguage),
                   focusNode: _passwordFocus,
                   controller: _passwordController,
                   icon: Icons.lock_outline,
@@ -425,8 +430,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   activeColor: const Color(0xFF0981D1),
                   materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
-                const Text(
-                  "Remember me",
+                Text(
+                  TranslationService.getTranslationSync('remember_me', _selectedLanguage),
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.black87,
@@ -446,8 +451,8 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               child: _isLoading
                   ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text(
-                      "Log In",
+                  : Text(
+                      TranslationService.getTranslationSync('login', _selectedLanguage),
                       style: TextStyle(fontSize: 18, color: Colors.white),
                     ),
             ),

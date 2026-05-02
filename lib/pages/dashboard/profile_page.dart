@@ -1063,11 +1063,11 @@ class _ProfilePageState extends State<ProfilePage> {
               ],
             ),
           ] else ...[
-            infoTile(Icons.person_outline, "Full Name", userData!["name"]),
-            infoTile(Icons.phone_outlined, "Phone Number", userData!["phone"]),
-            infoTile(Icons.location_city, "City", userData!["city"]),
-            infoTile(Icons.location_on, "Barangay", userData!["barangay"]),
-            infoTile(Icons.home, "Purok", userData!["purok"]),
+            infoTile(Icons.person_outline, TranslationService.getTranslationSync('full_name', _selectedLanguage), userData!["name"]),
+            infoTile(Icons.phone_outlined, TranslationService.getTranslationSync('phone_number', _selectedLanguage), userData!["phone"]),
+            infoTile(Icons.location_city, TranslationService.getTranslationSync('city', _selectedLanguage), userData!["city"]),
+            infoTile(Icons.location_on, TranslationService.getTranslationSync('barangay', _selectedLanguage), userData!["barangay"]),
+            infoTile(Icons.home, TranslationService.getTranslationSync('purok', _selectedLanguage), userData!["purok"]),
           ],
         ],
       ),
@@ -1081,7 +1081,7 @@ class _ProfilePageState extends State<ProfilePage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Contact Developer',
+            TranslationService.getTranslationSync('contact_developer', _selectedLanguage),
             style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -1121,8 +1121,8 @@ class _ProfilePageState extends State<ProfilePage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Developer Support',
+                      Text(
+                        TranslationService.getTranslationSync('developer_support', _selectedLanguage),
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -1130,8 +1130,8 @@ class _ProfilePageState extends State<ProfilePage> {
                         ),
                       ),
                       const SizedBox(height: 4),
-                      const Text(
-                        'Need help? Contact our developer.',
+                      Text(
+                        TranslationService.getTranslationSync('need_help_contact', _selectedLanguage),
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.grey,
@@ -1276,7 +1276,7 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
               const SizedBox(width: 8),
               Text(
-                "Harvest Control",
+                TranslationService.getTranslationSync('harvest_control', _selectedLanguage),
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
@@ -1288,10 +1288,10 @@ class _ProfilePageState extends State<ProfilePage> {
           const SizedBox(height: 12),
           Text(
             _isHarvesting 
-              ? "Your harvest session is currently active. The system is ready to receive data from your device."
+              ? TranslationService.getTranslationSync('harvest_active_message', _selectedLanguage)
               : _isGloballyHarvesting
-                ? "$_activeHarvestingUser is currently harvesting. Please wait for the session to end."
-                : "Start a harvest session to enable data collection from your device.",
+                ? "${TranslationService.getTranslationSync('other_user_harvesting', _selectedLanguage).replaceAll('{user}', _activeHarvestingUser ?? 'Unknown user')}"
+                : TranslationService.getTranslationSync('start_harvest_message', _selectedLanguage),
             style: TextStyle(
               fontSize: 14,
               color: _isGloballyHarvesting && !_isHarvesting 
@@ -1432,11 +1432,11 @@ class _ProfilePageState extends State<ProfilePage> {
       String type;
       
       if (action == 'start_harvest') {
-        title = '🐟 Harvest Started';
+        title = 'Harvest Started!';
         message = 'Harvesting session has started! Good luck with your harvest. (${_formatTimestamp(timestamp)})';
         type = 'harvest';
       } else {
-        title = '✅ Harvest Completed';
+        title = 'Harvest Completed!';
         message = 'Harvesting session has been completed successfully! (${_formatTimestamp(timestamp)})';
         type = 'success';
       }

@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:totepai/pages/authentications/auth_page.dart';
 import 'package:totepai/pages/dashboard/home_page.dart';
 import 'package:totepai/pages/splash_screen.dart';
@@ -9,6 +10,9 @@ import 'package:totepai/controllers/harvest_data_controller.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Load environment variables
+  await dotenv.load(fileName: ".env");
 
   if (Platform.isAndroid) {
     await Firebase.initializeApp(

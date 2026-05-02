@@ -16,6 +16,7 @@ import 'widgets/stat_card.dart';
 import 'forecast_page.dart';
 import 'profile_page.dart';
 import 'notification.dart';
+import 'dart:developer' as developer;
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -259,6 +260,8 @@ class _DashboardContentState extends State<DashboardContent> {
     _startForecastRemarksListener();
     // Start real-time machine data monitoring for notifications
     _notificationService.startMachineDataMonitoring();
+    // Start real-time forecast data monitoring for notifications
+    _notificationService.startForecastDataMonitoring();
   }
 
   @override
@@ -274,8 +277,12 @@ class _DashboardContentState extends State<DashboardContent> {
     _statusSubscription?.cancel();
     _globalStatusSubscription?.cancel();
     _forecastRemarksSubscription?.cancel();
+    _harvestDataStreamSubscription?.cancel(); // Cancel harvest data stream
+    _realtimeCheckTimer?.cancel(); // Cancel immediate check timer
     // Stop real-time machine data monitoring
     _notificationService.stopMachineDataMonitoring();
+    // Stop real-time forecast data monitoring
+    _notificationService.stopForecastDataMonitoring();
     super.dispose();
   }
 
@@ -344,60 +351,68 @@ class _DashboardContentState extends State<DashboardContent> {
         });
   }
 
-  // Start real-time forecast remarks listener
+  // Start real-time forecast remarks listener with TRULY real-time detection
   void _startForecastRemarksListener() {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    print('Setting up real-time forecast remarks listener');
+    print('🔥 Setting up TRULY real-time forecast remarks listener');
     
     _forecastRemarksSubscription = FirebaseFirestore.instance
         .collection('users')
         .doc(user.uid)
         .collection('harvest_data')
         .orderBy('timestamp', descending: true)
+        .limit(10) // Monitor more documents for better coverage
         .snapshots()
         .listen((QuerySnapshot snapshot) {
           if (mounted && snapshot.docs.isNotEmpty) {
+            print('🔥 FORECAST: Stream fired with ${snapshot.docs.length} documents');
+            
             // Get the latest document (first after ordering by timestamp descending)
             final doc = snapshot.docs.first;
             final data = doc.data() as Map<String, dynamic>?;
             final docId = doc.id; // Get document ID
             
             if (data != null) {
-              // Access geminiForecastRemarks directly from the document
-              final remarks = data['geminiForecastRemarks']?.toString();
-              if (remarks != null && remarks.trim().isNotEmpty) {
-                // Update the latest month's remarks
-                final currentYear = DateTime.now().year;
-                final currentMonth = DateTime.now().month - 1; // Convert to 0-based
-                
-                setState(() {
-                  harvestRemarksByYear[currentYear] ??= <int, String>{};
-                  harvestRemarksByYear[currentYear]![currentMonth] = remarks;
-                  currentHarvestRemarks = remarks;
-                });
-                
-                print('Real-time forecast remarks updated: $remarks');
-              }
+              final timestamp = data['timestamp'] as Timestamp?;
               
-              // Check if this is new harvest data and show dialog
-              if (_lastShownHarvestId != docId && data['totalPiecesOfHarvest'] != null) {
-                final timestamp = data['timestamp'] as Timestamp?;
-                if (timestamp != null) {
-                  final now = DateTime.now();
-                  final harvestTime = timestamp.toDate();
-                  final difference = now.difference(harvestTime);
+              if (timestamp != null) {
+                final harvestTime = timestamp.toDate();
+                final now = DateTime.now();
+                final difference = now.difference(harvestTime);
+                
+                print('🔥 FORECAST: Checking document: $docId, diff=${difference.inSeconds}s');
+                print('🔥 FORECAST: Document fields: ${data.keys.toList()}');
+                
+                // Access geminiForecastRemarks directly from the document
+                final remarks = data['geminiForecastRemarks']?.toString();
+                if (remarks != null && remarks.trim().isNotEmpty) {
+                  // Update the latest month's remarks
+                  final currentYear = DateTime.now().year;
+                  final currentMonth = DateTime.now().month - 1; // Convert to 0-based
                   
-                  // Show dialog for:
-                  // 1. New harvest data (within 5 minutes), OR
-                  // 2. New users who haven't seen any harvest results yet (_lastShownHarvestId is null)
-                  final bool isNewUser = _lastShownHarvestId == null;
-                  final bool shouldShowDialog = (difference.inMinutes < 5 || isNewUser) && !_showHarvestResultDialog;
+                  setState(() {
+                    harvestRemarksByYear[currentYear] ??= <int, String>{};
+                    harvestRemarksByYear[currentYear]![currentMonth] = remarks;
+                    currentHarvestRemarks = remarks;
+                  });
                   
-                  print('Harvest dialog check: isNewUser=$isNewUser, difference=${difference.inMinutes}min, shouldShow=$shouldShowDialog');
+                  print('🔥 FORECAST: Real-time forecast remarks updated: $remarks');
+                }
+                
+                // Enhanced harvest result dialog detection with immediate response
+                if (_lastShownHarvestId != docId && 
+                    data['totalPiecesOfHarvest'] != null && 
+                    data['totalWeightOfHarvest'] != null) {
+                  
+                  final bool shouldShowDialog = !_showHarvestResultDialog;
+                  
+                  print('🔥 FORECAST: Harvest dialog check: diff=${difference.inSeconds}s, shouldShow=$shouldShowDialog');
+                  print('🔥 FORECAST: Data validation - pieces=${data['totalPiecesOfHarvest']}, weight=${data['totalWeightOfHarvest']}');
                   
                   if (shouldShowDialog) {
+                    print('🔥 FORECAST: SHOWING HARVEST DIALOG FROM FORECAST LISTENER!');
                     setState(() {
                       _harvestResultData = data;
                       _showHarvestResultDialog = true;
@@ -407,21 +422,23 @@ class _DashboardContentState extends State<DashboardContent> {
                     // Save to persistent storage
                     _saveLastShownHarvestId(docId);
                     
-                    // Show the dialog
-                    showDialog(
-                      context: context,
-                      barrierDismissible: false,
-                      builder: (BuildContext context) {
-                        return _buildHarvestResultDialog();
-                      },
-                    );
+                    // Show the dialog immediately
+                    if (mounted) {
+                      showDialog(
+                        context: context,
+                        barrierDismissible: false,
+                        builder: (BuildContext context) {
+                          return _buildHarvestResultDialog();
+                        },
+                      );
+                    }
                   }
                 }
               }
             }
           }
         }, onError: (error) {
-          print('Error listening to forecast remarks changes: $error');
+          print('🔥 FORECAST: Error in real-time listener: $error');
         });
   }
 
@@ -973,6 +990,9 @@ class _DashboardContentState extends State<DashboardContent> {
       _isHarvesting = true;
     });
 
+    // DEBUG: Check existing data before starting harvest
+    await _debugCheckExistingData();
+
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
@@ -985,7 +1005,7 @@ class _DashboardContentState extends State<DashboardContent> {
           .doc(user.uid)
           .update({'status': 1});
 
-      // Show waiting dialog
+      // Show waiting dialog with real-time status
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -993,75 +1013,164 @@ class _DashboardContentState extends State<DashboardContent> {
           return WillPopScope(
             onWillPop: () async => false,
             child: AlertDialog(
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0981D1)),
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    'Harvest session started!',
-                    style: GoogleFonts.poppins(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Your device can now upload harvest data. Waiting for data...',
-                    style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Tip: Make sure your Orange Pi is connected and ready to upload data',
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      color: Colors.orange[700],
-                      fontStyle: FontStyle.italic,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              content: StatefulBuilder(
+                builder: (context, setState) {
+                  // Start a timer to update the waiting message
+                  Timer.periodic(const Duration(seconds: 1), (timer) {
+                    if (!_isHarvesting) {
+                      timer.cancel();
+                      Navigator.of(context).pop();
+                    }
+                  });
+                  
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      TextButton(
-                        onPressed: () async {
-                          Navigator.of(context).pop();
-                          await _stopHarvest();
+                      // Animated indicator
+                      TweenAnimationBuilder(
+                        duration: const Duration(seconds: 2),
+                        tween: Tween<double>(begin: 0, end: 1),
+                        builder: (context, double value, child) {
+                          return Transform.rotate(
+                            angle: value * 2 * 3.14159,
+                            child: Container(
+                              width: 60,
+                              height: 60,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    const Color(0xFF0981D1).withOpacity(0.1),
+                                    const Color(0xFF0981D1).withOpacity(0.3),
+                                  ],
+                                ),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: const Color(0xFF0981D1).withOpacity(0.5),
+                                  width: 2,
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.sync,
+                                color: Color(0xFF0981D1),
+                                size: 30,
+                              ),
+                            ),
+                          );
                         },
-                        child: Text(
-                          'Stop Harvest',
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.red,
-                          ),
+                      ),
+                      SizedBox(height: MediaQuery.of(context).size.height * 0.02),
+                      Text(
+                        '🔥 Real-time Monitoring Active',
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF0981D1),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Harvest session started! Waiting for data...',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          color: Colors.grey[700],
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.green.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.green.shade200),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.wifi_outlined, 
+                                 color: Colors.green.shade700, size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Real-time connection active - Data will appear instantly',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  color: Colors.green.shade700,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      TextButton(
-                        onPressed: () async {
-                          await _checkForNewHarvestDataAndRefresh();
-                        },
-                        child: Text(
-                          'Check Data',
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: const Color(0xFF0981D1),
-                          ),
+                      const SizedBox(height: 16),
+                      Text(
+                        '💡 Orange Pi should upload data automatically',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: Colors.orange[700],
+                          fontStyle: FontStyle.italic,
                         ),
+                        textAlign: TextAlign.center,
+                      ),
+                      SizedBox(height: MediaQuery.of(context).size.height * 0.02),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          TextButton(
+                            onPressed: () async {
+                              Navigator.of(context).pop();
+                              await _stopHarvest();
+                            },
+                            style: TextButton.styleFrom(
+                              backgroundColor: Colors.red.shade50,
+                              foregroundColor: Colors.red.shade700,
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.stop, size: 16),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Stop Harvest',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () async {
+                              await _checkForNewHarvestDataAndRefresh();
+                            },
+                            style: TextButton.styleFrom(
+                              backgroundColor: const Color(0xFF0981D1).withOpacity(0.1),
+                              foregroundColor: const Color(0xFF0981D1),
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.refresh, size: 16),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Check Now',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ],
-                  ),
-                ],
+                  );
+                },
               ),
             ),
           );
@@ -1093,37 +1202,294 @@ class _DashboardContentState extends State<DashboardContent> {
       }
     }
   }
+  
+  // DEBUG: Check existing data before starting harvest
+  Future<void> _debugCheckExistingData() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+      
+      print('🔍 DEBUG: Checking existing harvest data before starting...');
+      
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('harvest_data')
+          .orderBy('timestamp', descending: true)
+          .limit(3)
+          .get();
+      
+      print('🔍 DEBUG: Found ${snapshot.docs.length} existing documents');
+      
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+        final timestamp = data['timestamp'] as Timestamp?;
+        final totalPieces = data['totalPiecesOfHarvest'];
+        final totalWeight = data['totalWeightOfHarvest'];
+        
+        print('🔍 DEBUG: Doc ${doc.id}: timestamp=$timestamp, totalPieces=$totalPieces, totalWeight=$totalWeight');
+        print('🔍 DEBUG: Doc ${doc.id} fields: ${data.keys.toList()}');
+      }
+      
+      print('🔍 DEBUG: Last shown harvest ID: $_lastShownHarvestId');
+      
+      // Test if we can write to this collection
+      await _testWritePermission();
+    } catch (e) {
+      print('🔍 DEBUG: Error checking existing data: $e');
+    }
+  }
+  
+  // Test write permissions to harvest_data collection
+  Future<void> _testWritePermission() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+      
+      print('🔍 DEBUG: Testing write permissions to harvest_data...');
+      
+      final testDoc = {
+        'test': true,
+        'timestamp': Timestamp.now(),
+        'totalPiecesOfHarvest': 999,
+        'totalWeightOfHarvest': 999.0,
+      };
+      
+      final docRef = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('harvest_data')
+          .add(testDoc);
+      
+      print('🔍 DEBUG: Successfully wrote test document: ${docRef.id}');
+      
+      // Clean up test document
+      await docRef.delete();
+      print('🔍 DEBUG: Cleaned up test document');
+      
+    } catch (e) {
+      print('🔍 DEBUG: Write permission test failed: $e');
+    }
+  }
 
-  // Start checking for new harvest data periodically
+  // Real-time stream listener for immediate harvest data detection
+  StreamSubscription<QuerySnapshot>? _harvestDataStreamSubscription;
+  Timer? _realtimeCheckTimer; // Additional backup timer for immediate updates
+  
+  // Start checking for new harvest data with TRULY real-time listener
   Future<void> _startHarvestDataMonitoring() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
     
-    int attempts = 0;
-    const maxAttempts = 24; // 2 minutes = 24 * 5 seconds
-
-    while (attempts < maxAttempts && _isHarvesting) {
-      await Future.delayed(const Duration(seconds: 5));
-      attempts++;
-
-      bool newDataFound = await _checkForNewHarvestData(user.uid);
-      if (newDataFound) {
-        // Data received, stop monitoring and refresh
-        await _stopHarvest();
-        _loadHarvestData();
-        
-        // Show harvest result dialog after data is loaded
-        Future.delayed(const Duration(milliseconds: 500), () {
-          _getLatestHarvestDataForDialog();
+    print('🔥 Starting TRULY real-time harvest data monitoring...');
+    
+    // Store the timestamp when harvesting starts
+    final harvestStartTime = DateTime.now();
+    print('🔥 Harvest start time: $harvestStartTime');
+    
+    // Set up real-time listener that detects ANY new document added after harvest start
+    _harvestDataStreamSubscription = FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('harvest_data')
+        .where('timestamp', isGreaterThan: Timestamp.fromDate(harvestStartTime))
+        .orderBy('timestamp', descending: true)
+        .snapshots()
+        .listen((QuerySnapshot snapshot) {
+          print('🔥 REALTIME: Stream fired with ${snapshot.docs.length} documents');
+          
+          if (snapshot.docs.isNotEmpty && _isHarvesting) {
+            for (final newDoc in snapshot.docs) {
+              final docId = newDoc.id;
+              final data = newDoc.data() as Map<String, dynamic>;
+              final timestamp = data['timestamp'] as Timestamp?;
+              
+              print('🔥 REALTIME: Processing document: $docId');
+              print('🔥 REALTIME: Document data: ${data.keys.toList()}');
+              
+              // Check if this document has the required harvest data
+              final bool hasValidData = data['totalPiecesOfHarvest'] != null && 
+                                      data['totalWeightOfHarvest'] != null &&
+                                      timestamp != null;
+              
+              print('🔥 REALTIME: Validation - hasValidData=$hasValidData, totalPieces=${data['totalPiecesOfHarvest']}, totalWeight=${data['totalWeightOfHarvest']}');
+              
+              if (hasValidData && _lastShownHarvestId != docId) {
+                print('🔥 REALTIME: NEW HARVEST DATA DETECTED!');
+                print('🔥 REALTIME: Document ID: $docId');
+                print('🔥 REALTIME: Timestamp: $timestamp');
+                print('🔥 REALTIME: Total Pieces: ${data['totalPiecesOfHarvest']}');
+                print('🔥 REALTIME: Total Weight: ${data['totalWeightOfHarvest']}');
+                
+                // IMMEDIATELY handle the new harvest data
+                _handleNewHarvestData(data, docId);
+                break; // Process only the first valid document
+              } else {
+                print('🔥 REALTIME: Document not valid or already shown: hasValid=$hasValidData, isDuplicate=${_lastShownHarvestId == docId}');
+              }
+            }
+          } else {
+            print('🔥 REALTIME: Stream fired but no documents or not harvesting: docs=${snapshot.docs.length}, isHarvesting=$_isHarvesting');
+          }
+        }, onError: (error) {
+          print('🔥 REALTIME: Error in stream: $error');
         });
-        
-        return;
+    
+    // Start aggressive backup timer
+    _startAggressiveBackupTimer();
+    
+    // Also keep timeout as backup
+    _startHarvestTimeout();
+  }
+  
+  // Handle new harvest data immediately with enhanced UI updates
+  void _handleNewHarvestData(Map<String, dynamic> data, String docId) async {
+    if (!_isHarvesting) return;
+    
+    print('🔥 IMMEDIATE: Processing new harvest data...');
+    
+    // Cancel all monitoring immediately
+    await _harvestDataStreamSubscription?.cancel();
+    _harvestDataStreamSubscription = null;
+    _realtimeCheckTimer?.cancel();
+    _realtimeCheckTimer = null;
+    
+    // Update UI state immediately before stopping harvest
+    setState(() {
+      currentHarvestData = data;
+      _harvestResultData = data;
+      _showHarvestResultDialog = true;
+      _lastShownHarvestId = docId;
+      _isHarvesting = false; // Update harvest state immediately
+    });
+    
+    // Stop harvesting in background
+    _stopHarvestInBackground();
+    
+    // Save to persistent storage
+    await _saveLastShownHarvestId(docId);
+    
+    // Load full harvest data to refresh charts in background
+    _loadHarvestDataInBackground();
+    
+    // Close waiting dialog and show result dialog IMMEDIATELY
+    if (mounted) {
+      // Close any open dialogs first
+      Navigator.of(context, rootNavigator: true).pop();
+      
+      // Show result dialog IMMEDIATELY - no delay for true realtime
+      if (mounted && _showHarvestResultDialog) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext context) {
+            return _buildHarvestResultDialog();
+          },
+        );
       }
     }
-
-    // Timeout reached
+  }
+  
+  // Stop harvest in background without affecting UI
+  Future<void> _stopHarvestInBackground() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+      
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .update({'status': 0});
+      
+      print('🔥 Background: Harvest status updated to inactive');
+    } catch (e) {
+      print('🔥 Background: Error updating harvest status: $e');
+    }
+  }
+  
+  // Load harvest data in background
+  Future<void> _loadHarvestDataInBackground() async {
+    try {
+      await _loadHarvestData();
+      print('🔥 Background: Harvest data refreshed');
+    } catch (e) {
+      print('🔥 Background: Error refreshing harvest data: $e');
+    }
+  }
+  
+  // Start aggressive backup timer for maximum reliability
+  void _startAggressiveBackupTimer() {
+    print('🔥 Starting aggressive backup timer...');
+    _realtimeCheckTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
+      if (!_isHarvesting) {
+        print('🔥 BACKUP: Harvesting stopped, canceling timer');
+        timer.cancel();
+        return;
+      }
+      
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+      
+      try {
+        print('🔥 BACKUP: Aggressively checking for new harvest data...');
+        
+        final snapshot = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('harvest_data')
+            .orderBy('timestamp', descending: true)
+            .limit(1)
+            .get();
+        
+        print('🔥 BACKUP: Found ${snapshot.docs.length} documents');
+        
+        if (snapshot.docs.isNotEmpty) {
+          final newDoc = snapshot.docs.first;
+          final docId = newDoc.id;
+          final data = newDoc.data() as Map<String, dynamic>;
+          final timestamp = data['timestamp'] as Timestamp?;
+          
+          print('🔥 BACKUP: Checking latest document: $docId');
+          print('🔥 BACKUP: Document fields: ${data.keys.toList()}');
+          print('🔥 BACKUP: Required fields - totalPieces=${data['totalPiecesOfHarvest']}, totalWeight=${data['totalWeightOfHarvest']}, timestamp=$timestamp');
+          
+          // Check if this is valid harvest data and not already shown
+          final bool hasValidData = data['totalPiecesOfHarvest'] != null && 
+                                  data['totalWeightOfHarvest'] != null &&
+                                  timestamp != null;
+          final bool isNotDuplicate = _lastShownHarvestId != docId;
+          
+          print('🔥 BACKUP: Validation - hasValid=$hasValidData, isNotDuplicate=$isNotDuplicate');
+          
+          if (hasValidData && isNotDuplicate) {
+            print('🔥 BACKUP: NEW HARVEST DATA FOUND VIA BACKUP TIMER!');
+            timer.cancel();
+            _handleNewHarvestData(data, docId);
+          } else {
+            print('🔥 BACKUP: No new valid data found yet');
+          }
+        } else {
+          print('🔥 BACKUP: No documents found in harvest_data collection');
+        }
+      } catch (e) {
+        print('🔥 BACKUP: Error in aggressive check: $e');
+      }
+    });
+  }
+  Future<void> _startHarvestTimeout() async {
+    const timeoutDuration = Duration(minutes: 2);
+    
+    await Future.delayed(timeoutDuration);
+    
+    // Only show timeout if still harvesting and stream didn't catch data
     if (_isHarvesting && mounted) {
-      Navigator.of(context).pop();
+      print('🔥 Harvest timeout reached');
+      await _harvestDataStreamSubscription?.cancel();
+      _harvestDataStreamSubscription = null;
+      _realtimeCheckTimer?.cancel();
+      _realtimeCheckTimer = null;
+      
+      Navigator.of(context, rootNavigator: true).pop();
       setState(() {
         _isHarvesting = false;
       });
@@ -1280,6 +1646,7 @@ class _DashboardContentState extends State<DashboardContent> {
     }
 
     final totalPieces = _harvestResultData!['totalPiecesOfHarvest'] ?? 0;
+    final totalWeight = _harvestResultData!['totalWeightOfHarvest'] ?? 0.0;
     final timestamp = _harvestResultData!['timestamp'] as Timestamp?;
     final duration = _calculateHarvestDuration(timestamp);
 
@@ -1289,13 +1656,19 @@ class _DashboardContentState extends State<DashboardContent> {
       ),
       elevation: 15,
       backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      insetPadding: EdgeInsets.symmetric(
+        horizontal: MediaQuery.of(context).size.width * 0.05,
+        vertical: MediaQuery.of(context).size.height * 0.1,
+      ),
       child: Container(
         constraints: BoxConstraints(
           maxWidth: MediaQuery.of(context).size.width * 0.9,
           minWidth: 280,
+          maxHeight: MediaQuery.of(context).size.height * 0.75,
         ),
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.all(
+          MediaQuery.of(context).size.width * 0.04,
+        ),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(24),
@@ -1316,10 +1689,11 @@ class _DashboardContentState extends State<DashboardContent> {
             width: 1,
           ),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 8),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(height: MediaQuery.of(context).size.height * 0.01),
             
             // Title with gradient
             Container(
@@ -1338,13 +1712,13 @@ class _DashboardContentState extends State<DashboardContent> {
                 children: [
                   Image.asset(
                     'assets/icon/fish.png',
-                    width: 42,
-                    height: 42,
+                    width: MediaQuery.of(context).size.width * 0.1,
+                    height: MediaQuery.of(context).size.width * 0.1,
                     color: const Color(0xFF0981D1),
                     errorBuilder: (context, error, stackTrace) {
-                      return const Icon(
+                      return Icon(
                         Icons.catching_pokemon,
-                        size: 32,
+                        size: MediaQuery.of(context).size.width * 0.08,
                         color: Color(0xFF0981D1),
                       );
                     },
@@ -1353,7 +1727,7 @@ class _DashboardContentState extends State<DashboardContent> {
                   Text(
                     'Harvested Result',
                     style: GoogleFonts.poppins(
-                      fontSize: 22,
+                      fontSize: MediaQuery.of(context).size.width * 0.055,
                       fontWeight: FontWeight.bold,
                       color: const Color(0xFF0981D1),
                       letterSpacing: 0.5,
@@ -1362,7 +1736,7 @@ class _DashboardContentState extends State<DashboardContent> {
                 ],
               ),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: MediaQuery.of(context).size.height * 0.02),
             
             // Enhanced results container
             Container(
@@ -1416,7 +1790,7 @@ class _DashboardContentState extends State<DashboardContent> {
                           child: Icon(
                             Icons.inventory_2_outlined,
                             color: const Color(0xFF0981D1),
-                            size: 24,
+                            size: MediaQuery.of(context).size.width * 0.06,
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -1427,7 +1801,7 @@ class _DashboardContentState extends State<DashboardContent> {
                               Text(
                                 'Total Pieces',
                                 style: GoogleFonts.poppins(
-                                  fontSize: 12,
+                                  fontSize: MediaQuery.of(context).size.width * 0.03,
                                   color: Colors.grey.shade600,
                                   fontWeight: FontWeight.w500,
                                 ),
@@ -1436,7 +1810,7 @@ class _DashboardContentState extends State<DashboardContent> {
                               Text(
                                 '$totalPieces pieces',
                                 style: GoogleFonts.poppins(
-                                  fontSize: 18,
+                                  fontSize: MediaQuery.of(context).size.width * 0.045,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.black87,
                                 ),
@@ -1449,7 +1823,7 @@ class _DashboardContentState extends State<DashboardContent> {
                   ),
                   const SizedBox(height: 12),
                   
-                  // Duration Section
+                  // Total Weight Section
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
@@ -1468,13 +1842,13 @@ class _DashboardContentState extends State<DashboardContent> {
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: Colors.green.withOpacity(0.1),
+                            color: Colors.blue.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Icon(
-                            Icons.schedule_outlined,
-                            color: Colors.green,
-                            size: 24,
+                            Icons.monitor_weight_outlined,
+                            color: Colors.blue,
+                            size: MediaQuery.of(context).size.width * 0.06,
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -1483,20 +1857,20 @@ class _DashboardContentState extends State<DashboardContent> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Duration',
+                                'Total Weight',
                                 style: GoogleFonts.poppins(
-                                  fontSize: 12,
+                                  fontSize: MediaQuery.of(context).size.width * 0.03,
                                   color: Colors.grey.shade600,
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                duration,
+                                '${totalWeight.toStringAsFixed(2)} kg',
                                 style: GoogleFonts.poppins(
-                                  fontSize: 18,
+                                  fontSize: MediaQuery.of(context).size.width * 0.045,
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.green,
+                                  color: Colors.blue,
                                 ),
                               ),
                             ],
@@ -1508,12 +1882,12 @@ class _DashboardContentState extends State<DashboardContent> {
                 ],
               ),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: MediaQuery.of(context).size.height * 0.02),
             
             // Enhanced OK Button
             Container(
               width: double.infinity,
-              height: 48,
+              height: MediaQuery.of(context).size.height * 0.06,
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
                   begin: Alignment.topLeft,
@@ -1539,6 +1913,8 @@ class _DashboardContentState extends State<DashboardContent> {
                     _harvestResultData = null;
                   });
                   Navigator.of(context).pop();
+                  // Refresh widgets data immediately
+                  _loadHarvestData();
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.transparent,
@@ -1553,7 +1929,7 @@ class _DashboardContentState extends State<DashboardContent> {
                 child: Text(
                   'OK',
                   style: GoogleFonts.poppins(
-                    fontSize: 16,
+                    fontSize: MediaQuery.of(context).size.width * 0.04,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 0.5,
                   ),
@@ -1579,7 +1955,8 @@ class _DashboardContentState extends State<DashboardContent> {
                   ],
                 ),
               ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -1665,16 +2042,14 @@ class _DashboardContentState extends State<DashboardContent> {
             final harvestTime = timestamp.toDate();
             final difference = now.difference(harvestTime);
             
-            // Show dialog for:
-            // 1. Recent data (within 1 hour), OR
-            // 2. First load (_isLoading), OR
-            // 3. New users who haven't seen any harvest results yet (_lastShownHarvestId is null)
-            final bool isNewUser = _lastShownHarvestId == null;
-            final bool shouldShowDialog = difference.inHours < 1 || _isLoading || isNewUser;
+            // Show dialog for any new harvest data (no time limit)
+            // Only check if not already showing and not duplicate
+            print('🔍 DIALOG CHECK: _showHarvestResultDialog=$_showHarvestResultDialog');
+            print('🔍 DIALOG CHECK: _lastShownHarvestId=$_lastShownHarvestId, docId=$docId');
             
-            print('Harvest dialog check (manual): isNewUser=$isNewUser, difference=${difference.inHours}h, isLoading=$_isLoading, shouldShow=$shouldShowDialog');
-            
-            if (shouldShowDialog) {
+            // Show dialog for any new harvest data
+            if (!_showHarvestResultDialog) {
+              print('🔍 DIALOG CHECK: SHOWING HARVEST DIALOG FOR NEW DATA!');
               setState(() {
                 _harvestResultData = data;
                 _showHarvestResultDialog = true;
@@ -2288,6 +2663,17 @@ class _DashboardContentState extends State<DashboardContent> {
     );
   }
 
+  // Helper method to format decimal numbers with commas and decimal places
+  String _formatDecimalNumber(num number) {
+    if (number is int) {
+      return _formatNumber(number);
+    }
+    return number.toStringAsFixed(2).replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]},',
+    );
+  }
+
   // Build horizontal bar chart like the one in the image
   Widget _buildHorizontalBarChart() {
     final bool hasAnyData = yearOptions.isNotEmpty && selectedYear != null;
@@ -2436,8 +2822,8 @@ class _DashboardContentState extends State<DashboardContent> {
         ? (sardinesDataByYear[year]?[selectedMonth] ?? 0).toInt()
         : 0;
     final int totalBangus = threeInOne + fourInOne + twoInOne + sardines;
-    final int totalWeight = hasAnyData
-        ? (totalWeightDataByYear[year]?[selectedMonth] ?? 0).toInt()
+    final num totalWeight = hasAnyData
+        ? (totalWeightDataByYear[year]?[selectedMonth] ?? 0)
         : 0;
 
     return Scaffold(
@@ -2490,7 +2876,7 @@ class _DashboardContentState extends State<DashboardContent> {
                             text: TextSpan(
                               children: [
                                 TextSpan(
-                                  text: "Welcome back, ",
+                                  text: TranslationService.getTranslationSync('welcome_back', _selectedLanguage) + ", ",
                                   style: GoogleFonts.poppins(
                                     fontSize: 22,
                                     fontWeight: FontWeight.w700,
@@ -2547,14 +2933,14 @@ class _DashboardContentState extends State<DashboardContent> {
               // 📊 Harvest Data Detailed Breakdown Stats Section
               const SizedBox(height: 16),
               Text(
-                'Harvest Data Breakdown',
+                TranslationService.getTranslationSync('harvest_data_breakdown', _selectedLanguage),
                 style: GoogleFonts.poppins(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
                   color: const Color(0xFF0F172A),
                 ),
               ),
-              const SizedBox(height: 20),
+              SizedBox(height: MediaQuery.of(context).size.height * 0.02),
               // Total Bangus and Weight
               Row(
                 children: [
@@ -2574,7 +2960,7 @@ class _DashboardContentState extends State<DashboardContent> {
                     child: _buildSummaryCard(
                       title: 'Total Weight',
                       value: hasDataForMonth
-                          ? _formatNumber(totalWeight)
+                          ? _formatDecimalNumber(totalWeight)
                           : 'N/A',
                       unit: 'kg',
                       icon: Icons.scale_outlined,
@@ -2663,33 +3049,33 @@ class _DashboardContentState extends State<DashboardContent> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        "Actual Data of Harvest",
+                        TranslationService.getTranslationSync('actual_data_of_harvest', _selectedLanguage),
                         style: GoogleFonts.poppins(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
                           color: const Color(0xFF0F172A),
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      FutureBuilder<String>(
-                        future: _getHarvestDuration(),
-                        builder: (context, snapshot) {
-                          String durationText = 'Loading...';
-                          if (snapshot.hasData) {
-                            durationText = snapshot.data!;
-                          } else if (snapshot.hasError) {
-                            durationText = 'Duration not available';
-                          }
-                          return Text(
-                            "Duration: $durationText",
-                            style: GoogleFonts.poppins(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.grey.shade600,
-                            ),
-                          );
-                        },
-                      ),
+                      // const SizedBox(height: 4),
+                      // FutureBuilder<String>(
+                      //   future: _getHarvestDuration(),
+                      //   builder: (context, snapshot) {
+                      //     String durationText = 'Loading...';
+                      //     if (snapshot.hasData) {
+                      //       durationText = snapshot.data!;
+                      //     } else if (snapshot.hasError) {
+                      //       durationText = 'Duration not available';
+                      //     }
+                      //     return Text(
+                      //       "Duration: $durationText",
+                      //       style: GoogleFonts.poppins(
+                      //         fontSize: 12,
+                      //         fontWeight: FontWeight.w500,
+                      //         color: Colors.grey.shade600,
+                      //       ),
+                      //     );
+                      //   },
+                      // ),
                     ],
                   ),
                   const Spacer(),
@@ -2872,7 +3258,7 @@ class _DashboardContentState extends State<DashboardContent> {
                         ],
                       ),
                       
-                      const SizedBox(height: 20),
+                      SizedBox(height: MediaQuery.of(context).size.height * 0.02),
                       
                       // Divider
                       Container(
@@ -2890,7 +3276,7 @@ class _DashboardContentState extends State<DashboardContent> {
                         ),
                       ),
                       
-                      const SizedBox(height: 20),
+                      SizedBox(height: MediaQuery.of(context).size.height * 0.02),
                       
                       // Remarks content
                       if (currentHarvestRemarks != null && currentHarvestRemarks!.isNotEmpty)

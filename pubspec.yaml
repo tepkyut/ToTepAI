@@ -48,6 +48,10 @@ dependencies:
   google_sign_in: ^7.2.0
   shared_preferences: ^2.5.4
   http: ^1.2.0
+  flutter_dotenv: ^5.1.0
+  geolocator: ^10.1.0
+  geocoding: ^2.1.1
+  permission_handler: ^11.0.1
 
 dev_dependencies:
   flutter_test:
@@ -76,10 +80,14 @@ flutter:
   uses-material-design: true
 
   assets:
+    - .env
     - assets/icon/icon.png
     - assets/icon/google.png
     - assets/icon/logout.png
     - assets/icon/fish.png
+    - assets/icon/harvest.png
+    - assets/icon/insurance.png
+
  
     - assets/images/icon.png
     - assets/images/logo.png

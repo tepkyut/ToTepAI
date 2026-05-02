@@ -4,6 +4,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:async';
 import '../../services/machine_monitoring_service.dart';
+import '../../services/translation_service.dart';
+import '../../services/language_persistence.dart';
 
 class NotificationItem {
   final String id;
@@ -31,7 +33,7 @@ class NotificationItem {
       case 'warning':
         return Icons.warning_amber_rounded; // Warning icon
       case 'harvest':
-        return Icons.precision_manufacturing; // Machine icon for fish harvest
+        return Icons.agriculture; // Agriculture icon for harvest
       case 'info':
       default:
         return Icons.info_rounded; // Info icon
@@ -46,7 +48,7 @@ class NotificationItem {
       case 'warning':
         return Colors.orange;
       case 'harvest':
-        return Colors.brown;
+        return Colors.blue;
       case 'info':
       default:
         return Colors.blue;
@@ -90,6 +92,87 @@ class NotificationService {
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  // Helper method to get user's language preference
+  Future<String> _getUserLanguage() async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return 'English';
+      
+      // Try to get from user document first
+      final userDoc = await _firestore.collection('users').doc(user.uid).get();
+      final userData = userDoc.data();
+      final savedLanguage = userData?['selectedLanguage'];
+      
+      if (savedLanguage != null && savedLanguage.isNotEmpty) {
+        return savedLanguage;
+      }
+      
+      // Fallback to LanguagePersistence
+      return await LanguagePersistence.getLanguage();
+    } catch (e) {
+      print('Error getting user language: $e');
+      return 'English';
+    }
+  }
+
+  // Helper method to create translated notifications
+  Future<void> _addTranslatedNotification({
+    required String titleKey,
+    required String messageKey,
+    String type = 'info',
+  }) async {
+    try {
+      final userLanguage = await _getUserLanguage();
+      
+      // Temporary hardcoded translations
+      Map<String, Map<String, String>> notificationTranslations = {
+        'welcome_notification_title': {
+          'English': 'Welcome To ToTepAI',
+          'Tagalog': 'Maligayang Pagdating sa ToTepAI',
+          'Kamayo': 'Madayaw nga Pag-abot sa ToTepAI',
+        },
+        'welcome_notification_message': {
+          'English': 'Your smart fish farming assistant helps track and optimize your harvest. Get AI-powered recommendations and predictive analytics to maximize your bangus production.',
+          'Tagalog': 'Ang iyong smart fish farming assistant ay tumutulong sa pag-track at pag-optimize ng iyong ani. Makakuha ng AI-powered recommendations at predictive analytics para sa maximum na bangus production.',
+          'Kamayo': 'Ang imong smart fish farming assistant nagatabang sa pag-track ug pag-optimize sa imong ani. Makakuha ka ug AI-powered recommendations ug predictive analytics para sa maximum na bangus production.',
+        },
+        'getting_started_title': {
+          'English': 'Getting Started Guide 📋',
+          'Tagalog': 'Gabay sa Pagsisimula 📋',
+          'Kamayo': 'Giya sa Pagsugod 📋',
+        },
+        'getting_started_message': {
+          'English': 'Start recording your harvest data to get personalized insights. Use AI analytics on the home page to optimize your farming operations.',
+          'Tagalog': 'Magsimulang mag-record ng iyong harvest data para makakuha ng personalized insights. Gamitin ang AI analytics sa home page para i-optimize ang iyong farming operations.',
+          'Kamayo': 'Magsugod sa pag-record sa imong harvest data para makakuha ug personalized insights. Gamita ang AI analytics sa home page para i-optimize ang imong farming operations.',
+        },
+        'pro_tip_title': {
+          'English': 'Pro Tip 💡',
+          'Tagalog': 'Pro Tip 💡',
+          'Kamayo': 'Pro Tip 💡',
+        },
+        'pro_tip_message': {
+          'English': 'Track daily harvest patterns to boost production. AI analytics helps identify the best strategies based on fish behavior. Increase yield by up to 30% and reduce costs.',
+          'Tagalog': 'Subaybahan ang araw-araw na harvest patterns para ma-boost ang production. Ang AI analytics ay tumutulong na makahanap ng mga best strategies batay sa fish behavior. Pataasin ang yield hanggang 30% at bawasan ang costs.',
+          'Kamayo': 'Subaybahan ang adlaw-adlaw nga harvest patterns para ma-boost ang production. Ang AI analytics nagatabang nga makit-an ang mga best strategies base sa fish behavior. Pataason ang yield hangtud 30% ug kuhaan ang costs.',
+        },
+      };
+      
+      final translatedTitle = notificationTranslations[titleKey]?[userLanguage] ?? 
+                            notificationTranslations[titleKey]?['English'] ?? titleKey;
+      final translatedMessage = notificationTranslations[messageKey]?[userLanguage] ?? 
+                              notificationTranslations[messageKey]?['English'] ?? messageKey;
+      
+      await addNotification(
+        title: translatedTitle,
+        message: translatedMessage,
+        type: type,
+      );
+    } catch (e) {
+      print('Error adding translated notification: $e');
+    }
+  }
 
   Future<void> addNotification({
     required String title,
@@ -177,23 +260,23 @@ class NotificationService {
       // Only create welcome notifications if they don't exist yet
       if (!hasWelcomeNotifications) {
         // Welcome notification
-        await addNotification(
-          title: 'Welcome To ToTepAI',
-          message: 'Your smart fish farming assistant helps track and optimize your harvest. Get AI-powered recommendations and predictive analytics to maximize your bangus production.',
+        await _addTranslatedNotification(
+          titleKey: 'welcome_notification_title',
+          messageKey: 'welcome_notification_message',
           type: 'info',
         );
         
         // Getting started guide
-        await addNotification(
-          title: 'Getting Started Guide 📋',
-          message: 'Start recording your harvest data to get personalized insights. Use AI analytics on the home page to optimize your farming operations.',
+        await _addTranslatedNotification(
+          titleKey: 'getting_started_title',
+          messageKey: 'getting_started_message',
           type: 'info',
         );
         
         // Pro tip
-        await addNotification(
-          title: 'Pro Tip 💡',
-          message: 'Track daily harvest patterns to boost production. AI analytics helps identify the best strategies based on fish behavior. Increase yield by up to 30% and reduce costs.',
+        await _addTranslatedNotification(
+          titleKey: 'pro_tip_title',
+          messageKey: 'pro_tip_message',
           type: 'success',
         );
 
@@ -347,6 +430,13 @@ class NotificationService {
   final Set<String> _processedDocumentIds = {}; // Track processed document IDs
   bool _isMonitoring = false; // Track if monitoring is active
 
+  // Forecast data monitoring methods
+  StreamSubscription? _forecastDataSubscription;
+  DateTime? _lastForecastNotification;
+  String? _lastForecastDataHash; // Store hash of last forecast data to prevent duplicates
+  final Set<String> _processedForecastDocumentIds = {}; // Track processed forecast document IDs
+  bool _isForecastMonitoring = false; // Track if forecast monitoring is active
+
   void startMachineDataMonitoring() {
     final user = _auth.currentUser;
     if (user == null) return;
@@ -408,11 +498,82 @@ class NotificationService {
     print('🔥 DEBUG: Machine data monitoring stopped');
   }
 
+  void startForecastDataMonitoring() {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    if (_isForecastMonitoring) {
+      print('🔥 DEBUG: Forecast data monitoring is already active');
+      return;
+    }
+
+    print('🔥 DEBUG: Starting forecast data monitoring for user ${user.uid}');
+
+    // Listen to all harvest data changes for forecast updates in real-time
+    _forecastDataSubscription = _firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('harvest_data')
+        .orderBy('timestamp', descending: true)
+        .snapshots()
+        .listen((snapshot) {
+      print('🔥 DEBUG: Forecast data snapshot received with ${snapshot.docChanges.length} changes');
+      
+      // Process both ADDED and MODIFIED documents for forecast data updates
+      for (final docChange in snapshot.docChanges) {
+        if (docChange.type == DocumentChangeType.added || docChange.type == DocumentChangeType.modified) {
+          final documentId = docChange.doc.id;
+          final harvestData = docChange.doc.data();
+          
+          // Check if we've already processed this document for forecast
+          if (_processedForecastDocumentIds.contains(documentId)) {
+            print('🔥 DEBUG: Forecast document $documentId already processed, skipping');
+            continue;
+          }
+          
+          if (harvestData != null) {
+            final changeType = docChange.type == DocumentChangeType.added ? 'ADDED' : 'MODIFIED';
+            print('🔥 DEBUG: New forecast data $changeType detected - Document ID: $documentId');
+            
+            // Only process if it has geminiForecastedData
+            final geminiData = harvestData['geminiForecastedData'] as Map<String, dynamic>?;
+            if (geminiData != null) {
+              _processedForecastDocumentIds.add(documentId); // Mark as processed
+              _isForecastMonitoring = true; // Mark monitoring as active
+              _processForecastData(harvestData);
+            } else {
+              print('🔥 DEBUG: Document $documentId has no geminiForecastedData, skipping');
+            }
+          }
+        }
+      }
+    });
+
+    _isForecastMonitoring = true;
+    print('🔥 DEBUG: Forecast data monitoring started successfully');
+  }
+
+  void stopForecastDataMonitoring() {
+    if (!_isForecastMonitoring) {
+      print('🔥 DEBUG: Forecast data monitoring is not active');
+      return;
+    }
+
+    print('🔥 DEBUG: Stopping forecast data monitoring');
+    _forecastDataSubscription?.cancel();
+    _forecastDataSubscription = null;
+    _processedForecastDocumentIds.clear(); // Clear processed forecast document IDs when stopping
+    _isForecastMonitoring = false;
+    print('🔥 DEBUG: Forecast data monitoring stopped');
+  }
+
   Future<void> _processMachineData(Map<String, dynamic> harvestData) async {
     try {
       print('🔥 DEBUG: _processMachineData called');
+      print('🔥 DEBUG: Harvest data keys: ${harvestData.keys.toList()}');
       
       final timestamp = (harvestData['timestamp'] as Timestamp).toDate();
+      print('🔥 DEBUG: Timestamp: $timestamp');
       
       final totalPieces = harvestData['totalPiecesOfHarvest'] as int? ?? 0;
       final totalWeight = harvestData['totalWeightOfHarvest'] as double? ?? 0.0;
@@ -423,53 +584,198 @@ class NotificationService {
       final twoInOne = harvestData['twoInOneTotalPieces'] as int? ?? 0;
       final sardines = harvestData['sardinesTotalPieces'] as int? ?? 0;
 
+      print('🔥 DEBUG: Extracted harvest data:');
+      print('  - Total Pieces: $totalPieces');
+      print('  - Total Weight: $totalWeight');
+      print('  - Month: $month');
+      print('  - Year: $year');
+      print('  - 3-in-1: $threeInOne');
+      print('  - 4-in-1: $fourInOne');
+      print('  - 2-in-1: $twoInOne');
+      print('  - Sardines: $sardines');
+
       // Skip if no harvest data
       if (totalPieces == 0 && totalWeight == 0.0) {
         print('🔥 DEBUG: No harvest data, skipping');
         return;
       }
 
-      // Create hash of harvest data to detect duplicates
-      final currentDataHash = _createHarvestDataHash(
-        totalPieces, totalWeight, month, year, 
-        threeInOne, fourInOne, twoInOne, sardines
-      );
-      
-      print('🔥 DEBUG: Data hash: $currentDataHash, Last hash: $_lastHarvestDataHash');
-      
-      // Skip if this is the same data as before (duplicate prevention)
-      if (_lastHarvestDataHash == currentDataHash) {
-        print('🔥 DEBUG: Same data as before, skipping notification');
-        return;
-      }
-      
-      // Avoid duplicate notifications within 60 seconds
-      if (_lastHarvestNotification != null && 
-          timestamp.difference(_lastHarvestNotification!).inSeconds < 60) {
-        print('🔥 DEBUG: Too soon since last notification, skipping');
-        return;
-      }
+      // TEMPORARILY DISABLE DUPLICATE PREVENTION FOR TESTING
+      print('🔥 DEBUG: CREATING HARVEST NOTIFICATIONS WITHOUT DUPLICATE CHECKS');
 
-      print('🔥 DEBUG: Creating New Harvest Data Recorded notification');
-
-      // 1. New Harvest Data Recorded notification - using same type as Top Performing Category
+      // 1. New Harvest Data Recorded notification
+      print('🔥 DEBUG: Creating New Harvest Data Recorded notification...');
       await addNotification(
         title: 'New Harvest Data Recorded',
-        message: 'Harvest data for $month $year has been successfully recorded. Total pieces: $totalPieces, Total weight: ${totalWeight.toStringAsFixed(2)} kg.',
-        type: 'success', // Changed from 'harvest' to 'success' to match Top Performing Category
+        message: 'Harvested data for $month $year has been successfully recorded. Total pieces: $totalPieces, Total weight: ${totalWeight.toStringAsFixed(2)} kg.',
+        type: 'success',
       );
-
-      print('🔥 DEBUG: New Harvest Data Recorded notification created');
+      print('🔥 DEBUG: ✅ New Harvest Data Recorded notification created');
 
       // 2. Real-time Top Performing Category notification for this harvest
+      print('🔥 DEBUG: Creating Top Performing Category notification...');
       await _createRealTimeTopPerformingCategoryNotification(
         totalPieces, threeInOne, fourInOne, twoInOne, sardines, month, year
       );
+      print('🔥 DEBUG: ✅ Top Performing Category notification created');
 
-      _lastHarvestNotification = timestamp;
-      _lastHarvestDataHash = currentDataHash;
+      print('🔥 DEBUG: ✅ All harvest notifications created successfully');
     } catch (e) {
       print('🔥 DEBUG: Error processing machine data: $e');
+    }
+  }
+
+  Future<void> _processForecastData(Map<String, dynamic> harvestData) async {
+    try {
+      print('🔥 DEBUG: _processForecastData called');
+      print('🔥 DEBUG: Harvest data keys: ${harvestData.keys.toList()}');
+      
+      final timestamp = (harvestData['timestamp'] as Timestamp).toDate();
+      print('🔥 DEBUG: Timestamp: $timestamp');
+      
+      // Check for geminiForecastedData
+      final geminiData = harvestData['geminiForecastedData'] as Map<String, dynamic>?;
+      if (geminiData == null) {
+        print('🔥 DEBUG: No geminiForecastedData found, skipping forecast notification');
+        return;
+      }
+
+      print('🔥 DEBUG: Gemini data keys: ${geminiData.keys.toList()}');
+      
+      final predictedHarvestData = geminiData['predictedHarvestData']?.toString() ?? '';
+      final weatherAdvisory = geminiData['weatherAdvisory']?.toString() ?? '';
+      final mape = geminiData['MAPE']?.toString() ?? '';
+      final forecastingModel = geminiData['forecastingModel']?.toString() ?? '';
+
+      print('🔥 DEBUG: Extracted data:');
+      print('  - Predicted: $predictedHarvestData');
+      print('  - Weather: $weatherAdvisory');
+      print('  - MAPE: $mape');
+      print('  - Model: $forecastingModel');
+
+      // Skip if no forecast data
+      if (predictedHarvestData.isEmpty && weatherAdvisory.isEmpty && mape.isEmpty && forecastingModel.isEmpty) {
+        print('🔥 DEBUG: No forecast data in geminiForecastedData, skipping');
+        return;
+      }
+
+      // TEMPORARILY DISABLE DUPLICATE PREVENTION FOR TESTING
+      print('🔥 DEBUG: CREATING NOTIFICATIONS WITHOUT DUPLICATE CHECKS');
+
+      // 1. New AI Forecast Data Insight notification
+      if (predictedHarvestData.isNotEmpty) {
+        print('🔥 DEBUG: Creating AI Forecast notification...');
+        await addNotification(
+          title: 'New AI Forecast Predictions',
+          message: 'AI has generated new harvest predictions: $predictedHarvestData',
+          type: 'info',
+        );
+        print('🔥 DEBUG: ✅ New AI Forecast notification created');
+      }
+
+      // 2. MAPE-based accuracy notification
+      if (mape.isNotEmpty) {
+        print('🔥 DEBUG: MAPE found in database: $mape');
+        await _createMAPENotification(mape);
+        print('🔥 DEBUG: ✅ MAPE notification created');
+      } else {
+        print('🔥 DEBUG: No MAPE value found in geminiForecastedData');
+      }
+
+      // 3. Weather advisory notification
+      if (weatherAdvisory.isNotEmpty) {
+        print('🔥 DEBUG: Creating Weather Advisory notification...');
+        await addNotification(
+          title: 'Weather Advisory Update',
+          message: weatherAdvisory,
+          type: 'warning',
+        );
+        print('🔥 DEBUG: ✅ Weather Advisory notification created');
+      }
+
+      print('🔥 DEBUG: ✅ All forecast notifications created successfully');
+    } catch (e) {
+      print('🔥 DEBUG: Error processing forecast data: $e');
+    }
+  }
+
+  // Create a hash from harvest data to detect duplicates
+  String _createHarvestDataHash(
+    int totalPieces,
+    double totalWeight,
+    String month,
+    int year,
+    int threeInOne,
+    int fourInOne,
+    int twoInOne,
+    int sardines,
+  ) {
+    // Create a string representation of all harvest data
+    final dataString = '$totalPieces|$totalWeight|$month|$year|$threeInOne|$fourInOne|$twoInOne|$sardines';
+    return dataString;
+  }
+
+  // Create a hash from forecast data to detect duplicates
+  String _createForecastDataHash(
+    String? predictedHarvestData,
+    String? weatherAdvisory,
+    String? mape,
+    String? forecastingModel,
+  ) {
+    // Create a string representation of all forecast data
+    final dataString = '$predictedHarvestData|$weatherAdvisory|$mape|$forecastingModel';
+    return dataString;
+  }
+
+  // Create MAPE-based notification for forecast accuracy
+  Future<void> _createMAPENotification(String mape) async {
+    try {
+      print('🔥 DEBUG: _createMAPENotification called with MAPE: $mape');
+      
+      // Remove % sign and parse MAPE value
+      final cleanMape = mape.replaceAll('%', '').trim();
+      final mapeValue = double.tryParse(cleanMape);
+      if (mapeValue == null) {
+        print('🔥 DEBUG: Invalid MAPE value: $mape (cleaned: $cleanMape)');
+        return;
+      }
+
+      print('🔥 DEBUG: Parsed MAPE value: $mapeValue (from: $mape)');
+
+      String message;
+      String type;
+
+      if (mapeValue <= 5.0) {
+        message = 'Excellent forecast accuracy! MAPE is ${mapeValue.toStringAsFixed(2)}% - predictions are highly reliable.';
+        type = 'success';
+        print('🔥 DEBUG: MAPE classification: Excellent (≤5%)');
+      } else if (mapeValue <= 10.0) {
+        message = 'Good forecast accuracy! MAPE is ${mapeValue.toStringAsFixed(2)}% - predictions are reasonably reliable.';
+        type = 'success';
+        print('🔥 DEBUG: MAPE classification: Good (≤10%)');
+      } else if (mapeValue <= 15.0) {
+        message = 'Moderate forecast accuracy. MAPE is ${mapeValue.toStringAsFixed(2)}% - consider predictions with some caution.';
+        type = 'warning';
+        print('🔥 DEBUG: MAPE classification: Moderate (≤15%)');
+      } else {
+        message = 'Low forecast accuracy. MAPE is ${mapeValue.toStringAsFixed(2)}% - predictions may be less reliable. More data may improve accuracy.';
+        type = 'warning';
+        print('🔥 DEBUG: MAPE classification: Low (>15%)');
+      }
+
+      print('🔥 DEBUG: Creating Forecast Accuracy Update notification...');
+      print('🔥 DEBUG: Message: $message');
+      print('🔥 DEBUG: Type: $type');
+
+      await addNotification(
+        title: 'Forecast Accuracy Update',
+        message: message,
+        type: type,
+      );
+
+      print('🔥 DEBUG: ✅ MAPE notification created successfully: $mapeValue%');
+    } catch (e) {
+      print('🔥 DEBUG: Error creating MAPE notification: $e');
     }
   }
 
@@ -516,22 +822,6 @@ class NotificationService {
     } catch (e) {
       print('🔥 DEBUG: Error creating real-time Top Performing Category notification: $e');
     }
-  }
-
-  // Create a hash from harvest data to detect duplicates
-  String _createHarvestDataHash(
-    int totalPieces,
-    double totalWeight,
-    String month,
-    int year,
-    int threeInOne,
-    int fourInOne,
-    int twoInOne,
-    int sardines,
-  ) {
-    // Create a string representation of all harvest data
-    final dataString = '$totalPieces|$totalWeight|$month|$year|$threeInOne|$fourInOne|$twoInOne|$sardines';
-    return dataString;
   }
 
   // Check if a notification with specific title already exists
@@ -678,9 +968,93 @@ class NotificationService {
         }
       }
 
+      // Generate Yield Trend Analysis notification
+      await _generateYieldTrendNotification(
+        totalBangusDataByYear,
+        currentYear,
+        currentMonth,
+      );
+
       print('Data-based notifications generated successfully');
     } catch (e) {
       print('Error generating data-based notifications: $e');
+    }
+  }
+
+  // Generate Yield Trend Analysis notification
+  Future<void> _generateYieldTrendNotification(
+    Map<int, List<num>> totalBangusDataByYear,
+    int currentYear,
+    int currentMonth,
+  ) async {
+    try {
+      print('🔥 YIELD TREND: Starting analysis - Year: $currentYear, Month: $currentMonth');
+      
+      // Need at least 3 months of data for trend analysis
+      if (currentMonth < 2) {
+        print('🔥 YIELD TREND: Skipping - Less than 3 months available (current month: $currentMonth)');
+        return;
+      }
+
+      final currentMonthTotal = totalBangusDataByYear[currentYear]?[currentMonth] ?? 0;
+      final previousMonthTotal = totalBangusDataByYear[currentYear]?[currentMonth - 1] ?? 0;
+      final twoMonthsAgoTotal = totalBangusDataByYear[currentYear]?[currentMonth - 2] ?? 0;
+
+      print('🔥 YIELD TREND: Data - Current: $currentMonthTotal, Previous: $previousMonthTotal, Two months ago: $twoMonthsAgoTotal');
+
+      // Skip if current month has no data
+      if (currentMonthTotal == 0) {
+        print('🔥 YIELD TREND: Skipping - No data for current month');
+        return;
+      }
+
+      // Calculate trend percentages
+      final monthlyChangePrevious = previousMonthTotal > 0 
+          ? ((currentMonthTotal - previousMonthTotal) / previousMonthTotal * 100)
+          : 0.0;
+      
+      final monthlyChangeTwoMonths = twoMonthsAgoTotal > 0
+          ? ((previousMonthTotal - twoMonthsAgoTotal) / twoMonthsAgoTotal * 100)
+          : 0.0;
+
+      print('🔥 YIELD TREND: Changes - Previous month: ${monthlyChangePrevious.toStringAsFixed(2)}%, Two months ago: ${monthlyChangeTwoMonths.toStringAsFixed(2)}%');
+      final isSignificantIncrease = monthlyChangePrevious > 20 && monthlyChangeTwoMonths > 0;
+      final isSignificantDecrease = monthlyChangePrevious < -20 && monthlyChangeTwoMonths < 0;
+
+      print(' YIELD TREND: Significant increase: $isSignificantIncrease, Significant decrease: $isSignificantDecrease');
+
+      if (isSignificantIncrease || isSignificantDecrease) {
+        final trendTitle = 'Yield Trend Analysis';
+        
+        // Check if notification already exists for this month
+        final monthYearKey = '${_getMonthName(currentMonth)} $currentYear';
+        if (await _notificationExists('$trendTitle - $monthYearKey')) {
+          return;
+        }
+
+        String trendMessage;
+        String notificationType;
+
+        if (isSignificantIncrease) {
+          trendMessage = 'Excellent growth! Your harvest increased by ${monthlyChangePrevious.round()}% this month compared to last month. Keep up the great work!';
+          notificationType = 'success';
+        } else {
+          trendMessage = 'Harvest declined by ${monthlyChangePrevious.abs().round()}% this month. Consider reviewing feeding schedules and water quality to optimize production.';
+          notificationType = 'warning';
+        }
+
+        await addNotification(
+          title: '$trendTitle - $monthYearKey',
+          message: trendMessage,
+          type: notificationType,
+        );
+
+        print('🔥 YIELD TREND: Notification created: ${isSignificantIncrease ? "Increase" : "Decrease"}');
+      } else {
+        print('🔥 YIELD TREND: No notification created - Trends not significant enough');
+      }
+    } catch (e) {
+      print('Error generating yield trend notification: $e');
     }
   }
 
@@ -804,6 +1178,20 @@ class NotificationScreen extends StatefulWidget {
 
 class _NotificationScreenState extends State<NotificationScreen> {
   final NotificationService _notificationService = NotificationService();
+  String _currentLanguage = 'English';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLanguagePreference();
+  }
+
+  Future<void> _loadLanguagePreference() async {
+    final savedLanguage = await LanguagePersistence.getLanguage();
+    setState(() {
+      _currentLanguage = savedLanguage;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -813,7 +1201,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
         backgroundColor: const Color(0xFF0981D1),
         elevation: 0,
         title: Text(
-          'Notifications',
+          TranslationService.getTranslationSync('notifications', _currentLanguage),
           style: GoogleFonts.poppins(
             fontSize: 18,
             fontWeight: FontWeight.w600,
@@ -1062,23 +1450,23 @@ class _NotificationScreenState extends State<NotificationScreen> {
               }
             },
             itemBuilder: (context) => [
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'mark_all_read',
                 child: Row(
                   children: [
-                    Icon(Icons.mark_email_read, size: 18),
-                    SizedBox(width: 8),
-                    Text('Mark all as read'),
+                    const Icon(Icons.mark_email_read, size: 18),
+                    const SizedBox(width: 8),
+                    Text(TranslationService.getTranslationSync('mark_all_read', _currentLanguage)),
                   ],
                 ),
               ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'clear_all',
                 child: Row(
                   children: [
-                    Icon(Icons.clear_all, size: 18),
-                    SizedBox(width: 8),
-                    Text('Clear all'),
+                    const Icon(Icons.clear_all, size: 18),
+                    const SizedBox(width: 8),
+                    Text(TranslationService.getTranslationSync('clear_all', _currentLanguage)),
                   ],
                 ),
               ),
@@ -1132,7 +1520,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                   const Icon(Icons.notifications_off_outlined, size: 64, color: Colors.grey),
                   const SizedBox(height: 16),
                   Text(
-                    'No notifications',
+                    TranslationService.getTranslationSync('no_notifications', _currentLanguage),
                     style: GoogleFonts.poppins(
                       fontSize: 18,
                       color: Colors.grey,
@@ -1330,6 +1718,20 @@ class _NotificationTileState extends State<NotificationTile> {
                   child: widget.notification.title.contains('Welcome To ToTepAI') 
                     ? Image.asset(
                         'assets/icon/fish.png',
+                        width: 24,
+                        height: 24,
+                        color: _getTypeColor(widget.notification.type),
+                      )
+                    : widget.notification.type == 'harvest'
+                    ? Image.asset(
+                        'assets/icon/harvest.png',
+                        width: 24,
+                        height: 24,
+                        color: _getTypeColor(widget.notification.type),
+                      )
+                    : widget.notification.type == 'success' && widget.notification.title.contains('Harvest Completed')
+                    ? Image.asset(
+                        'assets/icon/insurance.png',
                         width: 24,
                         height: 24,
                         color: _getTypeColor(widget.notification.type),

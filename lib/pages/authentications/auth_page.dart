@@ -4,6 +4,8 @@ import 'package:totepai/pages/authentications/login.dart';
 import 'package:totepai/pages/authentications/register.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:totepai/utils/responsive.dart';
+import 'package:totepai/services/translation_service.dart';
+import 'package:totepai/services/language_persistence.dart';
 
 class AuthPage extends StatefulWidget {
   final bool showLogin;
@@ -17,11 +19,20 @@ class AuthPage extends StatefulWidget {
 
 class AuthPageState extends State<AuthPage> {
   bool isLoginSelected = true;
+  String _currentLanguage = 'English';
 
   @override
   void initState() {
     super.initState();
     isLoginSelected = widget.showLogin;
+    _loadLanguagePreference();
+  }
+
+  Future<void> _loadLanguagePreference() async {
+    final savedLanguage = await LanguagePersistence.getLanguage();
+    setState(() {
+      _currentLanguage = savedLanguage;
+    });
   }
 
   @override
@@ -159,9 +170,9 @@ class AuthPageState extends State<AuthPage> {
                     text: TextSpan(
                       style: TextStyle(fontSize: 12, color: Colors.grey[700]),
                       children: [
-                        const TextSpan(text: "By continuing, you agree to our "),
+                        TextSpan(text: TranslationService.getTranslationSync('by_continuing_agree', _currentLanguage)),
                         TextSpan(
-                          text: "Privacy Policy",
+                          text: TranslationService.getTranslationSync('privacy_policy', _currentLanguage),
                           style: const TextStyle(
                             color: Color(0xFF0981D1),
                             fontWeight: FontWeight.w500,
@@ -171,9 +182,9 @@ class AuthPageState extends State<AuthPage> {
                               _showPrivacyPolicy(context);
                             },
                         ),
-                        const TextSpan(text: " and "),
+                        TextSpan(text: TranslationService.getTranslationSync('and', _currentLanguage)),
                         TextSpan(
-                          text: "Terms of Service",
+                          text: TranslationService.getTranslationSync('terms_of_service', _currentLanguage),
                           style: const TextStyle(
                             color: Color(0xFF0981D1),
                             fontWeight: FontWeight.w500,
@@ -254,9 +265,9 @@ class AuthPageState extends State<AuthPage> {
             child: AlertDialog(
               titlePadding: const EdgeInsets.fromLTRB(12, 16, 12, 8),
               contentPadding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-              title: const Text(
-                'Privacy Policy',
-                style: TextStyle(
+              title: Text(
+                TranslationService.getTranslationSync('privacy_title', _currentLanguage),
+                style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF0981D1),
                 ),
@@ -266,20 +277,30 @@ class AuthPageState extends State<AuthPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _buildPolicySection('Data Collection', 
-                      'ToTepAI systematically collects harvest data, fish growth patterns, and environmental information to deliver precise forecasting and comprehensive analytics for your aquaculture operations.'),
-                    _buildPolicySection('Data Usage', 
-                      'Your data is utilized exclusively for:\n• Generating personalized harvest forecasts\n• Providing weather-based agricultural recommendations\n• Enhancing our artificial intelligence algorithms\n• Creating anonymized industry insights and research'),
-                    _buildPolicySection('Data Protection', 
-                      'We employ enterprise-grade security protocols including:\n• End-to-end encrypted data transmission and storage\n• Multi-factor secure user authentication\n• Quarterly comprehensive security audits\n• Full compliance with international data protection regulations'),
-                    _buildPolicySection('Data Sharing', 
-                      'Your personal and operational data is never shared with external parties without your explicit written consent. Only anonymized, statistically aggregated data may be utilized for academic research and industry development.'),
-                    _buildPolicySection('Your Rights', 
-                      'You retain the following rights regarding your data:\n• Complete access to your stored information at any time\n• Request permanent data deletion and removal\n• Opt-out of ongoing data collection processes\n• Export your complete dataset in industry-standard formats'),
+                    _buildPolicySection(
+                      TranslationService.getTranslationSync('data_collection', _currentLanguage),
+                      TranslationService.getTranslationSync('data_collection_content', _currentLanguage)
+                    ),
+                    _buildPolicySection(
+                      TranslationService.getTranslationSync('data_usage', _currentLanguage),
+                      TranslationService.getTranslationSync('data_usage_content', _currentLanguage)
+                    ),
+                    _buildPolicySection(
+                      TranslationService.getTranslationSync('data_protection', _currentLanguage),
+                      TranslationService.getTranslationSync('data_protection_content', _currentLanguage)
+                    ),
+                    _buildPolicySection(
+                      TranslationService.getTranslationSync('data_sharing', _currentLanguage),
+                      TranslationService.getTranslationSync('data_sharing_content', _currentLanguage)
+                    ),
+                    _buildPolicySection(
+                      TranslationService.getTranslationSync('your_rights', _currentLanguage),
+                      TranslationService.getTranslationSync('your_rights_content', _currentLanguage)
+                    ),
                     const SizedBox(height: 8),
-                    const Text(
-                      'Last updated: April 2026',
-                      style: TextStyle(
+                    Text(
+                      TranslationService.getTranslationSync('last_updated', _currentLanguage),
+                      style: const TextStyle(
                         fontSize: 15,
                         fontStyle: FontStyle.italic,
                         color: Colors.grey,
@@ -291,9 +312,9 @@ class AuthPageState extends State<AuthPage> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: const Text(
-                    'Close',
-                    style: TextStyle(color: Color(0xFF0981D1)),
+                  child: Text(
+                    TranslationService.getTranslationSync('close', _currentLanguage),
+                    style: const TextStyle(color: Color(0xFF0981D1)),
                   ),
                 ),
               ],
@@ -319,9 +340,9 @@ class AuthPageState extends State<AuthPage> {
             child: AlertDialog(
               titlePadding: const EdgeInsets.fromLTRB(12, 16, 12, 8),
               contentPadding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-              title: const Text(
-                'Terms of Service',
-                style: TextStyle(
+              title: Text(
+                TranslationService.getTranslationSync('terms_title', _currentLanguage),
+                style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF0981D1),
                 ),
@@ -331,24 +352,38 @@ class AuthPageState extends State<AuthPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _buildPolicySection('Acceptance of Terms', 
-                      'By accessing and utilizing ToTepAI services, you expressly agree to be bound by these terms and conditions. Should you disagree with any provision herein, you must immediately cease all use of our platform.'),
-                    _buildPolicySection('Service Description', 
-                      'ToTepAI is an advanced artificial intelligence platform designed for aquaculture management, delivering:\n• Sophisticated harvest forecasting and analytical insights\n• Meteorological-based agricultural recommendations\n• Comprehensive growth pattern analysis\n• Continuous real-time monitoring and reporting'),
-                    _buildPolicySection('User Responsibilities', 
-                      'As a registered user, you hereby commit to:\n• Provide accurate and verifiable harvest data\n• Utilize the service exclusively for legitimate aquaculture operations\n• Refrain from attempting to manipulate or compromise the AI system\n• Respect all intellectual property and proprietary rights'),
-                    _buildPolicySection('Service Availability', 
-                      'While we maintain a service level objective of 99.9% operational uptime, we cannot guarantee uninterrupted service availability. ToTepAI shall not be held liable for temporary service disruptions or data loss resulting from technical complications beyond our reasonable control.'),
-                    _buildPolicySection('Limitation of Liability', 
-                      'ToTepAI delivers predictive analytics and recommendations based on available data inputs. These insights are provided for guidance purposes only and must be supplemented with professional agricultural judgment. ToTepAI assumes no liability for operational decisions made in reliance upon our recommendations.'),
-                    _buildPolicySection('Account Termination', 
-                      'ToTepAI reserves the unilateral right to suspend or terminate user accounts that violate these terms, engage in fraudulent activities, or misuse the platform in any manner deemed detrimental to service integrity.'),
-                    _buildPolicySection('Modifications', 
-                      'These terms of service may be periodically amended at our discretion. Continued utilization of ToTepAI services following such modifications shall constitute unequivocal acceptance of the revised terms.'),
+                    _buildPolicySection(
+                      TranslationService.getTranslationSync('acceptance_of_terms', _currentLanguage),
+                      TranslationService.getTranslationSync('acceptance_of_terms_content', _currentLanguage)
+                    ),
+                    _buildPolicySection(
+                      TranslationService.getTranslationSync('service_description', _currentLanguage),
+                      TranslationService.getTranslationSync('service_description_content', _currentLanguage)
+                    ),
+                    _buildPolicySection(
+                      TranslationService.getTranslationSync('user_responsibilities', _currentLanguage),
+                      TranslationService.getTranslationSync('user_responsibilities_content', _currentLanguage)
+                    ),
+                    _buildPolicySection(
+                      TranslationService.getTranslationSync('service_availability', _currentLanguage),
+                      TranslationService.getTranslationSync('service_availability_content', _currentLanguage)
+                    ),
+                    _buildPolicySection(
+                      TranslationService.getTranslationSync('limitation_of_liability', _currentLanguage),
+                      TranslationService.getTranslationSync('limitation_of_liability_content', _currentLanguage)
+                    ),
+                    _buildPolicySection(
+                      TranslationService.getTranslationSync('account_termination', _currentLanguage),
+                      TranslationService.getTranslationSync('account_termination_content', _currentLanguage)
+                    ),
+                    _buildPolicySection(
+                      TranslationService.getTranslationSync('modifications', _currentLanguage),
+                      TranslationService.getTranslationSync('modifications_content', _currentLanguage)
+                    ),
                     const SizedBox(height: 8),
-                    const Text(
-                      'Last updated: April 2026',
-                      style: TextStyle(
+                    Text(
+                      TranslationService.getTranslationSync('last_updated', _currentLanguage),
+                      style: const TextStyle(
                         fontSize: 15,
                         fontStyle: FontStyle.italic,
                         color: Colors.grey,
@@ -360,9 +395,9 @@ class AuthPageState extends State<AuthPage> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: const Text(
-                    'Close',
-                    style: TextStyle(color: Color(0xFF0981D1)),
+                  child: Text(
+                    TranslationService.getTranslationSync('close', _currentLanguage),
+                    style: const TextStyle(color: Color(0xFF0981D1)),
                   ),
                 ),
               ],

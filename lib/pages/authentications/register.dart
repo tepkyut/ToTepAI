@@ -271,7 +271,7 @@ class _SignInScreenState extends State<SignInScreen> {
                 controller: _nameController,
                 focusNode: _nameFocus,
                 decoration: _inputDecoration(
-                  labelText: "Username",
+                  labelText: TranslationService.getTranslationSync('username', _selectedLanguage),
                   focusNode: _nameFocus,
                   controller: _nameController,
                   icon: Icons.person_outline,
@@ -295,7 +295,7 @@ class _SignInScreenState extends State<SignInScreen> {
                 controller: _emailController,
                 focusNode: _emailFocus,
                 decoration: _inputDecoration(
-                  labelText: "Email",
+                  labelText: TranslationService.getTranslationSync('email', _selectedLanguage),
                   focusNode: _emailFocus,
                   controller: _emailController,
                   icon: Icons.email_outlined,
@@ -320,7 +320,7 @@ class _SignInScreenState extends State<SignInScreen> {
                 focusNode: _passwordFocus,
                 obscureText: _obscurePassword,
                 decoration: _inputDecoration(
-                  labelText: "Password",
+                  labelText: TranslationService.getTranslationSync('password', _selectedLanguage),
                   focusNode: _passwordFocus,
                   controller: _passwordController,
                   icon: Icons.lock_outline,
@@ -355,7 +355,7 @@ class _SignInScreenState extends State<SignInScreen> {
                 child: Row(
                   children: [
                     Text(
-                      'Password strength: ',
+                      TranslationService.getTranslationSync('password_strength', _selectedLanguage),
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey[600],
@@ -393,7 +393,7 @@ class _SignInScreenState extends State<SignInScreen> {
                 focusNode: _confirmFocus,
                 obscureText: _obscureConfirm,
                 decoration: _inputDecoration(
-                  labelText: "Confirm Password",
+                  labelText: TranslationService.getTranslationSync('confirm_password', _selectedLanguage),
                   focusNode: _confirmFocus,
                   controller: _confirmPasswordController,
                   icon: Icons.lock_person_outlined,
@@ -434,14 +434,14 @@ class _SignInScreenState extends State<SignInScreen> {
               ),
               child: _isLoading
                   ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text(
-                      "Sign Up",
+                  : Text(
+                      TranslationService.getTranslationSync('signup', _selectedLanguage),
                       style: TextStyle(fontSize: 18, color: Colors.white),
                     ),
             ),
             const SizedBox(height: 20),
             Row(
-              children: const [
+              children: [
                 Expanded(
                   child: Divider(
                     color: Colors.grey,
